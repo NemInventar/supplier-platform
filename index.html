@@ -6,1141 +6,954 @@
 <title>NemInventar – Samarbejdsplatform</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0f1117;--surface:#161b22;--card:#1c2128;--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.13);--text:#e6edf3;--muted:#7d8590;--muted2:#4d5562;--blue:#2563eb;--bd:rgba(37,99,235,.15);--green:#22c55e;--gd:rgba(34,197,94,.15);--red:#ef4444;--rd:rgba(239,68,68,.15);--yellow:#f59e0b;--yd:rgba(245,158,11,.15);--orange:#f97316;--od:rgba(249,115,22,.15);--purple:#a855f7;--pd:rgba(168,85,247,.15);--radius:10px}
-*{scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
-::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;min-height:100vh}
-/* ── SIDEBAR ── */
-.sidebar{width:210px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);position:fixed;top:0;left:0;bottom:0;z-index:50;display:flex;flex-direction:column;overflow-y:auto}
-.logo{padding:16px 14px 12px;border-bottom:1px solid var(--border)}
-.logo-title{font-size:13px;font-weight:700}
-.logo-sub{font-size:10px;color:var(--muted);margin-top:1px}
-.nav-section-label{padding:10px 14px 4px;font-size:9px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em}
-.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:500;color:var(--muted);transition:all .13s;margin:1px 6px;user-select:none}
-.nav-item:hover{background:var(--card);color:var(--text)}
-.nav-item.active{background:var(--bd);color:var(--blue)}
-.nav-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:999px;font-size:9px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;display:none}
-/* ── MAIN ── */
-.main{margin-left:210px;padding:24px 32px;min-height:100vh}
+:root{
+  --bg:#f1f5f9;--surface:#ffffff;--card:#ffffff;--border:#e2e8f0;--border2:#cbd5e1;
+  --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
+  --blue:#2563eb;--blue-light:#eff6ff;--blue-mid:#dbeafe;
+  --green:#16a34a;--green-light:#f0fdf4;
+  --red:#dc2626;--red-light:#fef2f2;
+  --yellow:#d97706;--yellow-light:#fffbeb;
+  --orange:#ea580c;--orange-light:#fff7ed;
+  --purple:#7c3aed;--purple-light:#f5f3ff;
+  --radius:10px;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05)
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;min-height:100vh;font-size:14px}
+*{scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
+.sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);position:fixed;top:0;left:0;bottom:0;z-index:50;display:flex;flex-direction:column}
+.logo{padding:18px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;border-radius:8px;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex-shrink:0}
+.logo .t1{font-size:13px;font-weight:700}.logo .t2{font-size:10px;color:var(--muted)}
+.nav{padding:10px 8px;flex:1}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .12s;margin-bottom:1px;user-select:none}
+.nav-item:hover{background:var(--bg);color:var(--text)}.nav-item.active{background:var(--blue-light);color:var(--blue);font-weight:600}
+.nav-item .ico{font-size:15px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:999px;font-size:9px;font-weight:700;padding:1px 5px;display:none}
+.main{margin-left:220px;padding:28px 32px;min-height:100vh}
 .page{display:none}.page.active{display:block}
-/* ── TOP BAR ── */
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.page-title{font-size:20px;font-weight:700}
-.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
-/* ── PHASE SUMMARY BARS ── */
-.phase-bars{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
-.phase-bar{display:flex;align-items:center;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;transition:border-color .13s;gap:12px}
-.phase-bar:hover{border-color:var(--border2)}
-.phase-bar-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.phase-bar-name{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;flex:1}
-.phase-bar-count{font-size:13px;font-weight:700;min-width:24px}
-.phase-bar-amount{font-size:13px;color:var(--muted);margin-left:auto}
-.phase-bar-chevron{color:var(--muted2);font-size:11px;transition:transform .2s}
-.phase-bar.open .phase-bar-chevron{transform:rotate(90deg)}
-/* ── COLLAB CARDS ── */
-.phase-cards{display:none;padding:0 0 12px 0;flex-direction:column;gap:8px}
-.phase-cards.open{display:flex}
-.collab-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:13px 16px;cursor:pointer;transition:border-color .13s,background .13s}
-.collab-card:hover{border-color:var(--blue);background:rgba(37,99,235,.04)}
-.cc-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
-.cc-num{font-size:10px;font-weight:700;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:5px;padding:2px 6px;flex-shrink:0}
-.cc-name{font-size:13px;font-weight:600;flex:1}
-.cc-amount{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap}
-.cc-bottom{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.cc-sup{font-size:11px;color:var(--muted)}
-.cc-proj{font-size:11px;background:var(--bd);color:var(--blue);padding:2px 7px;border-radius:999px}
-.cc-age{font-size:11px;color:var(--muted2)}
-.cc-doc-badge{font-size:10px;background:var(--yd);color:var(--yellow);padding:2px 6px;border-radius:999px}
-/* ── RUNNING TOTAL ── */
-.layout-with-sidebar{display:flex;gap:20px}
-.layout-main{flex:1;min-width:0}
-.right-panel{width:220px;flex-shrink:0}
-.total-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:sticky;top:24px}
-.total-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-.total-value{font-size:22px;font-weight:800;margin-bottom:14px}
-.total-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)}
-.total-row:last-child{border:none}
-/* ── PHASE FILTER TABS ── */
-.phase-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
-.phase-tab{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;cursor:pointer;transition:all .13s;background:var(--surface);border:1px solid var(--border);color:var(--muted)}
-.phase-tab:hover{color:var(--text)}
-.phase-tab.active{border-color:transparent;color:#fff}
-/* ── DETAIL PAGE ── */
-.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;cursor:pointer;margin-bottom:16px;padding:5px 9px;border-radius:7px;transition:all .13s}
-.back-btn:hover{background:var(--card);color:var(--text)}
-.detail-hero{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
-/* ── STEPPER ── */
-.stepper{display:flex;align-items:flex-start;overflow-x:auto;padding-bottom:4px;gap:0}
-.step-wrap{display:flex;flex-direction:column;align-items:center;min-width:88px;flex:1}
-.step-circle{width:28px;height:28px;border-radius:50%;border:2px solid var(--border2);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;z-index:1;transition:all .2s}
-.step-circle.done{background:var(--green);border-color:var(--green);color:#fff}
-.step-circle.cur{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 4px var(--bd)}
-.step-circle.fut{color:var(--muted2)}
-.step-lbl{font-size:9.5px;color:var(--muted);margin-top:5px;text-align:center;line-height:1.3;max-width:78px}
-.step-lbl.done{color:var(--green)}.step-lbl.cur{color:var(--blue);font-weight:700}
-.step-lbl .step-date{display:block;font-size:9px;color:var(--muted2);margin-top:1px}
-.step-line{flex:1;height:2px;background:var(--border);margin-top:13px;min-width:6px}
-.step-line.done{background:var(--green)}
-/* ── DOCUMENTS ── */
-.doc-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
-.doc-row:last-child{border:none}
-.doc-icon{font-size:18px;flex-shrink:0}
-.doc-info{flex:1;min-width:0}
-.doc-name{font-size:13px;font-weight:500}
-.doc-meta{font-size:11px;color:var(--muted);margin-top:1px}
-/* ── CARDS / SECTION ── */
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
-.section-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.section-head{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
-.section-head-title{font-size:13px;font-weight:600}
-/* ── BADGES ── */
-.badge{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px}
-.bg{background:var(--gd);color:var(--green)}.bb{background:var(--bd);color:var(--blue)}.br{background:var(--rd);color:var(--red)}.by{background:var(--yd);color:var(--yellow)}.bo{background:var(--od);color:var(--orange)}.bm{background:rgba(125,133,144,.14);color:var(--muted)}.bp{background:var(--pd);color:var(--purple)}
-/* ── TABLE ── */
-table{width:100%;border-collapse:collapse}
-th{text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:7px 12px;border-bottom:1px solid var(--border)}
-td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12.5px;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(255,255,255,.018)}
-.empty-row{text-align:center;padding:28px;color:var(--muted);font-size:13px}
-/* ── BUTTONS ── */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .13s}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.page-title{font-size:20px;font-weight:700}.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .12s;line-height:1}
 .btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#1d4ed8}
-.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}.btn-ghost:hover{background:var(--card);color:var(--text)}
-.btn-green{background:var(--gd);color:var(--green);border:1px solid rgba(34,197,94,.25)}.btn-green:hover{background:rgba(34,197,94,.25)}
-.btn-danger{background:var(--rd);color:var(--red);border:1px solid rgba(239,68,68,.25)}.btn-danger:hover{background:rgba(239,68,68,.25)}
-.btn-sm{padding:4px 9px;font-size:11px}
-/* ── MODAL ── */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}.btn-ghost:hover{background:var(--bg);color:var(--text)}
+.btn-green{background:var(--green-light);color:var(--green);border:1px solid #bbf7d0}.btn-green:hover{background:#dcfce7}
+.btn-danger{background:var(--red-light);color:var(--red);border:1px solid #fecaca}.btn-danger:hover{background:#fee2e2}
+.btn-sm{padding:5px 10px;font-size:12px}.btn-xs{padding:3px 8px;font-size:11px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-pad{padding:20px}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.b-blue{background:var(--blue-light);color:var(--blue)}.b-green{background:var(--green-light);color:var(--green)}
+.b-red{background:var(--red-light);color:var(--red)}.b-yellow{background:var(--yellow-light);color:var(--yellow)}
+.b-orange{background:var(--orange-light);color:var(--orange)}.b-purple{background:var(--purple-light);color:var(--purple)}
+.b-gray{background:#f1f5f9;color:var(--muted)}
+.stage-bars{display:flex;flex-direction:column;gap:4px;margin-bottom:20px}
+.stage-bar{display:flex;align-items:center;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);cursor:pointer;gap:10px;transition:border-color .12s}
+.stage-bar:hover{border-color:var(--border2)}
+.stage-bar-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.stage-bar-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;flex:1}
+.stage-bar-count{font-size:13px;font-weight:700;min-width:20px}
+.stage-bar-total{font-size:12px;color:var(--muted)}
+.stage-bar-chev{color:var(--muted2);font-size:11px;transition:transform .18s}
+.stage-bar.open .stage-bar-chev{transform:rotate(90deg)}
+.stage-cards{display:none;flex-direction:column;gap:6px;padding:0 0 10px 0}
+.stage-cards.open{display:flex}
+.proj-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;cursor:pointer;box-shadow:var(--shadow);transition:border-color .12s,box-shadow .12s}
+.proj-card:hover{border-color:var(--blue);box-shadow:0 4px 12px rgba(37,99,235,.1)}
+.pc-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.pc-num{font-size:10px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:2px 6px;flex-shrink:0;line-height:1.4}
+.pc-name{font-size:14px;font-weight:600;flex:1}.pc-amount{font-size:14px;font-weight:700}
+.pc-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.pc-client{font-size:12px;color:var(--muted)}
+.prog-bar{height:5px;border-radius:999px;background:var(--border);overflow:hidden}
+.prog-fill{height:100%;border-radius:999px;transition:width .3s}
+.stepper{display:flex;align-items:flex-start;overflow-x:auto;padding-bottom:2px}
+.st-item{display:flex;flex-direction:column;align-items:center;min-width:80px;flex:1}
+.st-circle{width:26px;height:26px;border-radius:50%;border:2px solid var(--border2);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--muted2)}
+.st-circle.done{background:var(--green);border-color:var(--green);color:#fff}
+.st-circle.cur{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 4px var(--blue-light)}
+.st-line{flex:1;height:2px;background:var(--border);margin-top:12px;min-width:4px}
+.st-line.done{background:var(--green)}
+.st-lbl{font-size:9px;color:var(--muted);margin-top:5px;text-align:center;line-height:1.3;max-width:72px;padding:0 2px}
+.st-lbl.done{color:var(--green)}.st-lbl.cur{color:var(--blue);font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:600;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
+td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
+.empty-row{text-align:center;padding:32px;color:var(--muted)}
+.fg{margin-bottom:14px}.fl{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px}
+.fi,.fs,.ft{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;transition:border-color .12s;font-family:inherit}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-light)}
+.fs option{background:#fff}.ft{resize:vertical;min-height:72px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:200;align-items:center;justify-content:center}
 .overlay.open{display:flex}
-.modal{background:var(--card);border:1px solid var(--border2);border-radius:14px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 48px rgba(0,0,0,.5)}
-.modal-lg{width:680px}
-.mhead{padding:18px 22px 0;display:flex;justify-content:space-between;align-items:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.mhead{padding:20px 22px 0;display:flex;justify-content:space-between;align-items:center}
 .mtitle{font-size:15px;font-weight:700}
-.mclose{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:3px;line-height:1}
-.mclose:hover{color:var(--text)}
-.mbody{padding:18px 22px}
-.mfooter{padding:0 22px 18px;display:flex;gap:7px;justify-content:flex-end}
-/* ── FORMS ── */
-.fg{margin-bottom:13px}
-.fl{display:block;font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
-.fi,.fs,.ft{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:7px;padding:8px 12px;color:var(--text);font-size:13px;outline:none;transition:border-color .13s;font-family:inherit}
-.fi:focus,.fs:focus,.ft:focus{border-color:var(--blue)}
-.fs option{background:var(--card)}
-.ft{resize:vertical;min-height:68px}
-.frow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-/* ── SUPPLIER VIEW (public page) ── */
-.sv-body{background:#f8fafc;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;min-height:100vh;padding:40px 20px}
-.sv-card{background:#fff;border-radius:16px;max-width:680px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.08);overflow:hidden}
-.sv-header{background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;padding:28px 32px}
-.sv-logo{font-size:20px;font-weight:800;margin-bottom:4px}
-.sv-tagline{font-size:13px;opacity:.8}
-.sv-body-inner{padding:28px 32px}
-.sv-section{margin-bottom:24px}
-.sv-section-title{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
-.sv-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
-.sv-row:last-child{border:none}
-.sv-label{color:#64748b}
-.sv-value{font-weight:600;color:#1e293b}
-.sv-doc-btn{display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;margin-bottom:8px;text-decoration:none;color:#1e293b;transition:all .15s}
-.sv-doc-btn:hover{border-color:#2563eb;background:#eff6ff}
-.sv-footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px;font-size:12px;color:#94a3b8;text-align:center}
-/* ── MISC ── */
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.copy-box{background:var(--surface);border:1px solid var(--border2);border-radius:7px;padding:10px 12px;font-size:11px;color:var(--muted);word-break:break-all;font-family:monospace;cursor:text;user-select:all}
-.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-.search-in{background:var(--surface);border:1px solid var(--border2);border-radius:7px;padding:7px 12px;color:var(--text);font-size:12.5px;outline:none;width:220px;transition:border-color .13s}
-.search-in:focus{border-color:var(--blue)}
-@media(max-width:860px){.sidebar{display:none}.main{margin-left:0;padding:16px}.right-panel{display:none}.layout-with-sidebar{display:block}.frow{grid-template-columns:1fr}}
+.mclose{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.mclose:hover{background:var(--bg);color:var(--text)}
+.mbody{padding:18px 22px}.mfooter{padding:0 22px 20px;display:flex;gap:8px;justify-content:flex-end}
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;cursor:pointer;margin-bottom:16px;padding:5px 9px;border-radius:7px;transition:all .12s;border:1px solid transparent}
+.back-btn:hover{background:var(--surface);border-color:var(--border);color:var(--text)}
+.detail-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px;box-shadow:var(--shadow)}
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:14px}
+.section-head{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--bg)}
+.section-title{font-size:13px;font-weight:600}
+.task-row{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .1s}
+.task-row:last-child{border-bottom:none}.task-row:hover{background:#fafbfc}
+.task-num{font-size:10px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:2px 6px;flex-shrink:0}
+.task-name{flex:1;font-size:13px;font-weight:500}.task-est{font-size:12px;color:var(--muted);min-width:80px;text-align:right}
+.stat-row{display:flex;gap:14px;margin-bottom:20px}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;flex:1;box-shadow:var(--shadow)}
+.stat-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:800}.stat-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.copy-box{background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--muted);word-break:break-all;font-family:monospace;cursor:text;user-select:all}
+#supplier-view{display:none}
+@media(max-width:860px){.sidebar{display:none}.main{margin-left:0;padding:16px}.frow{grid-template-columns:1fr}.two-col{grid-template-columns:1fr}.stat-row{flex-direction:column}}
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════ SUPPLIER PUBLIC VIEW ═══════════════════════════════ -->
-<div id="supplier-view" style="display:none"></div>
+<div id="supplier-view"></div>
 
-<!-- ═══════════════════════════════ ADMIN APP ═══════════════════════════════ -->
 <div id="admin-app" style="display:none">
-
 <div class="sidebar">
-  <div class="logo"><div class="logo-title">🤝 NemInventar</div><div class="logo-sub">Samarbejdsplatform</div></div>
-  <div style="padding:6px;flex:1">
-    <div class="nav-item active" onclick="showPage('samarbejder')"><span>🔄</span>Samarbejder</div>
-    <div class="nav-item" onclick="showPage('leverandoerer')"><span>🏭</span>Leverandører</div>
-    <div class="nav-item" onclick="showPage('disputes')">
-      <span>⚠️</span>Disputes<span class="nav-badge" id="nb-disp">0</span>
-    </div>
-    <div class="nav-item" onclick="showPage('indstillinger')"><span>⚙️</span>Indstillinger</div>
+  <div class="logo">
+    <div class="logo-icon">🤝</div>
+    <div><div class="t1">NemInventar</div><div class="t2">Samarbejdsplatform</div></div>
+  </div>
+  <div class="nav">
+    <div class="nav-item active" onclick="nav('projekter')"><span class="ico">📁</span>Projekter</div>
+    <div class="nav-item" onclick="nav('leverandoerer')"><span class="ico">🏭</span>Leverandører</div>
+    <div class="nav-item" onclick="nav('kontrakter')"><span class="ico">📋</span>Kontrakter</div>
+    <div class="nav-item" onclick="nav('disputes')"><span class="ico">⚠️</span>Disputes<span class="nav-badge" id="nb-disp">0</span></div>
+    <div class="nav-item" onclick="nav('indstillinger')"><span class="ico">⚙️</span>Indstillinger</div>
   </div>
 </div>
 
 <div class="main">
 
-  <!-- ── SAMARBEJDER ── -->
-  <div id="page-samarbejder" class="page active">
-    <div class="topbar">
-      <div><div class="page-title">Samarbejder</div><div class="page-sub" id="sa-sub"></div></div>
-      <button class="btn btn-primary" onclick="openNewCollab(null)">+ Nyt samarbejde</button>
-    </div>
-    <div class="layout-with-sidebar">
-      <div class="layout-main">
-        <div class="phase-tabs" id="phase-tabs"></div>
-        <div id="phase-bars-container"></div>
-      </div>
-      <div class="right-panel">
-        <div class="total-card">
-          <div class="total-label">Total aftaleværdi</div>
-          <div class="total-value" id="rt-total">0 kr.</div>
-          <div class="total-row"><span style="color:var(--muted)">Under forhandling</span><span id="rt-pipeline">0 kr.</span></div>
-          <div class="total-row"><span style="color:var(--muted)">Aktive aftaler</span><span id="rt-active">0 kr.</span></div>
-          <div class="total-row"><span style="color:var(--muted)">Afsluttet</span><span id="rt-closed">0 kr.</span></div>
-        </div>
-      </div>
-    </div>
+<div id="page-projekter" class="page active">
+  <div class="topbar">
+    <div><div class="page-title">Projekter</div><div class="page-sub" id="proj-sub"></div></div>
+    <button class="btn btn-primary" onclick="openNewProj()">+ Nyt projekt</button>
   </div>
+  <div class="stat-row" id="proj-stats"></div>
+  <div id="proj-pipeline"></div>
+</div>
 
-  <!-- ── COLLAB DETAIL ── -->
-  <div id="page-collab-detail" class="page">
-    <div class="back-btn" id="collab-back" onclick="showPage('samarbejder')">← Samarbejder</div>
-    <div id="collab-detail-content"></div>
+<div id="page-projekt-detail" class="page">
+  <div class="back-btn" onclick="nav('projekter')">← Projekter</div>
+  <div id="proj-detail-content"></div>
+</div>
+
+<div id="page-task-detail" class="page">
+  <div class="back-btn" id="task-back-btn">← Projekt</div>
+  <div id="task-detail-content"></div>
+</div>
+
+<div id="page-leverandoerer" class="page">
+  <div class="topbar"><div><div class="page-title">Leverandører</div></div><button class="btn btn-primary" onclick="openNewSup()">+ Tilføj leverandør</button></div>
+  <div id="sups-list"></div>
+</div>
+
+<div id="page-kontrakter" class="page">
+  <div class="topbar"><div><div class="page-title">Kontrakter</div><div class="page-sub">CLM-overblik over alle kontrakter</div></div></div>
+  <div id="kontr-pipeline"></div>
+</div>
+
+<div id="page-contract-detail" class="page">
+  <div class="back-btn" id="ctr-back-btn">← Kontrakter</div>
+  <div id="contract-detail-content"></div>
+</div>
+
+<div id="page-disputes" class="page">
+  <div class="topbar"><div><div class="page-title">Disputes</div></div><button class="btn btn-primary" onclick="openNewDisp(null,null)">+ Registrer dispute</button></div>
+  <div class="section-card"><table>
+    <thead><tr><th>Titel</th><th>Leverandør</th><th>Kontrakt</th><th>Alvorlighed</th><th>Status</th><th>Dato</th><th></th></tr></thead>
+    <tbody id="disps-tbody"></tbody>
+  </table></div>
+</div>
+
+<div id="page-dispute-detail" class="page">
+  <div class="back-btn" onclick="nav('disputes')">← Disputes</div>
+  <div id="disp-detail-content"></div>
+</div>
+
+<div id="page-indstillinger" class="page">
+  <div class="topbar"><div><div class="page-title">Indstillinger</div></div></div>
+  <div class="card card-pad" style="max-width:560px;margin-bottom:16px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:4px">Kontraktskabeloner – download-links</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Indsæt OneDrive delings-links til de 4 skabeloner.</div>
+    <div id="tmpl-fields"></div>
+    <button class="btn btn-primary" onclick="saveTmplUrls()">Gem links</button>
   </div>
-
-  <!-- ── LEVERANDØRER ── -->
-  <div id="page-leverandoerer" class="page">
-    <div class="topbar">
-      <div><div class="page-title">Leverandører</div><div class="page-sub">Alle underleverandører</div></div>
-      <button class="btn btn-primary" onclick="openNewSup()">+ Tilføj leverandør</button>
-    </div>
-    <div class="filter-row">
-      <input class="search-in" id="sup-search" placeholder="Søg..." oninput="renderSups()">
-      <select class="fs" style="width:auto" id="sup-fcat" onchange="renderSups()">
-        <option value="">Alle kategorier</option>
-        <option value="produktion">Produktion</option><option value="fragt">Fragt</option>
-        <option value="tekstil">Tekstil</option><option value="materialer">Materialer</option>
-        <option value="montage">Montage</option><option value="andet">Andet</option>
-      </select>
-    </div>
-    <div id="sups-list"></div>
+  <div class="card card-pad" style="max-width:560px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Data</div>
+    <button class="btn btn-danger" onclick="if(confirm('Nulstil al data?'))resetAll()">Nulstil al data</button>
   </div>
+</div>
 
-  <!-- ── SUP DETAIL ── -->
-  <div id="page-sup-detail" class="page">
-    <div class="back-btn" onclick="showPage('leverandoerer')">← Leverandører</div>
-    <div id="sup-detail-content"></div>
-  </div>
+</div>
+</div>
 
-  <!-- ── DISPUTES ── -->
-  <div id="page-disputes" class="page">
-    <div class="topbar">
-      <div><div class="page-title">Disputes</div><div class="page-sub">Alle registrerede tvister</div></div>
-      <button class="btn btn-primary" onclick="openNewDispute(null,null)">+ Registrer dispute</button>
-    </div>
-    <div class="filter-row">
-      <select class="fs" style="width:auto" id="df-status" onchange="renderDisps()">
-        <option value="">Alle statusser</option><option value="open">Åben</option>
-        <option value="processing">Under behandling</option><option value="resolved">Løst</option>
-        <option value="escalated">Eskaleret</option>
-      </select>
-      <select class="fs" style="width:auto" id="df-sev" onchange="renderDisps()">
-        <option value="">Alle alvorlighedsgrader</option><option value="critical">Kritisk</option>
-        <option value="high">Høj</option><option value="medium">Medium</option><option value="low">Lav</option>
-      </select>
-    </div>
-    <div class="section-card"><table>
-      <thead><tr><th>Titel</th><th>Leverandør</th><th>Samarbejde</th><th>Alvorlighed</th><th>Status</th><th>Oprettet</th><th></th></tr></thead>
-      <tbody id="disps-tbody"></tbody>
-    </table></div>
-  </div>
-
-  <!-- ── DISPUTE DETAIL ── -->
-  <div id="page-dispute-detail" class="page">
-    <div class="back-btn" onclick="showPage('disputes')">← Disputes</div>
-    <div id="disp-detail-content"></div>
-  </div>
-
-  <!-- ── INDSTILLINGER ── -->
-  <div id="page-indstillinger" class="page">
-    <div class="topbar"><div><div class="page-title">Indstillinger</div></div></div>
-    <div class="card" style="max-width:560px;margin-bottom:16px">
-      <div style="font-size:13px;font-weight:600;margin-bottom:14px">Kontraktskabeloner – download-links</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Indsæt OneDrive delings-URL for hver skabelon, så leverandører kan downloade dem via det genererede link.</div>
-      <div id="template-url-fields"></div>
-      <button class="btn btn-primary" style="margin-top:12px" onclick="saveTemplateUrls()">Gem links</button>
-    </div>
-    <div class="card" style="max-width:560px">
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Data</div>
-      <button class="btn btn-danger" onclick="if(confirm('Nulstil al data?')){resetAll()}">Nulstil al data</button>
-    </div>
-  </div>
-
-</div><!-- end .main -->
-</div><!-- end #admin-app -->
-
-<!-- ══════════════════════ MODALS ══════════════════════ -->
-
-<!-- COLLAB MODAL -->
-<div class="overlay" id="ov-collab">
+<!-- MODALS -->
+<div class="overlay" id="ov-proj">
 <div class="modal">
-  <div class="mhead"><div class="mtitle" id="mc-title">Nyt samarbejde</div><button class="mclose" onclick="closeOv('collab')">✕</button></div>
+  <div class="mhead"><div class="mtitle" id="mp-title">Nyt projekt</div><button class="mclose" onclick="closeOv('proj')">✕</button></div>
   <div class="mbody">
-    <input type="hidden" id="mc-id">
-    <div class="fg"><label class="fl">Navn *</label><input class="fi" id="mc-name" placeholder="fx. Mørkhøj Part 2 – Produktion"></div>
+    <input type="hidden" id="mp-id">
+    <div class="fg"><label class="fl">Projektnavn *</label><input class="fi" id="mp-name" placeholder="fx. Mørkhøj Skole Part 2"></div>
     <div class="frow">
-      <div class="fg"><label class="fl">Leverandør *</label><select class="fs" id="mc-sup"></select></div>
-      <div class="fg"><label class="fl">Stadie</label>
-        <select class="fs" id="mc-stage">
-          <option value="contact">Kontakt</option><option value="draft">Aftaleudkast</option>
-          <option value="pending">Afventer underskrift</option><option value="signed">Underskrevet</option>
-          <option value="active">Aktiv produktion</option><option value="delivery">Levering</option>
-          <option value="closed">Afsluttet</option>
-        </select>
+      <div class="fg"><label class="fl">Bygherre / Kunde</label><input class="fi" id="mp-client"></div>
+      <div class="fg"><label class="fl">Status</label>
+        <select class="fs" id="mp-status"><option value="active">Aktiv</option><option value="planning">Planlægning</option><option value="completed">Afsluttet</option><option value="paused">Pauseret</option></select>
       </div>
     </div>
     <div class="frow">
-      <div class="fg"><label class="fl">Projekt</label><input class="fi" id="mc-proj" placeholder="fx. Mørkhøj Skole Part 2"></div>
-      <div class="fg"><label class="fl">Beløb (DKK)</label><input class="fi" id="mc-amount" type="number" placeholder="0"></div>
+      <div class="fg"><label class="fl">Budgetramme (DKK)</label><input class="fi" id="mp-budget" type="number"></div>
+      <div class="fg"><label class="fl">Deadline</label><input class="fi" id="mp-dead" type="date"></div>
+    </div>
+    <div class="fg"><label class="fl">Beskrivelse</label><textarea class="ft" id="mp-desc"></textarea></div>
+  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('proj')">Annuller</button><button class="btn btn-primary" onclick="saveProj()">Gem</button></div>
+</div></div>
+
+<div class="overlay" id="ov-task">
+<div class="modal">
+  <div class="mhead"><div class="mtitle" id="mt-title">Tilføj opgave</div><button class="mclose" onclick="closeOv('task')">✕</button></div>
+  <div class="mbody">
+    <input type="hidden" id="mt-id"><input type="hidden" id="mt-projid">
+    <div class="fg"><label class="fl">Opgavenavn *</label><input class="fi" id="mt-name" placeholder="fx. Produktion af inventar – Mørkhøj Phase 1"></div>
+    <div class="fg"><label class="fl">Opgavebeskrivelse / scope</label><textarea class="ft" id="mt-desc" placeholder="Hvad skal leverandøren levere? Materialer, mål, antal stk, specifikationer..."></textarea></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Estimeret beløb (DKK)</label><input class="fi" id="mt-est" type="number"></div>
+      <div class="fg"><label class="fl">Enhed</label><input class="fi" id="mt-unit" placeholder="stk, m², timer"></div>
+    </div>
+    <div class="fg"><label class="fl">Antal</label><input class="fi" id="mt-qty" type="number" placeholder="1"></div>
+  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('task')">Annuller</button><button class="btn btn-primary" onclick="saveTask()">Gem</button></div>
+</div></div>
+
+<div class="overlay" id="ov-bid">
+<div class="modal">
+  <div class="mhead"><div class="mtitle">Registrer tilbud</div><button class="mclose" onclick="closeOv('bid')">✕</button></div>
+  <div class="mbody">
+    <input type="hidden" id="mb-id"><input type="hidden" id="mb-taskid">
+    <div class="fg"><label class="fl">Leverandør *</label><select class="fs" id="mb-sup"></select></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Tilbudsbeløb (DKK) *</label><input class="fi" id="mb-amount" type="number"></div>
+      <div class="fg"><label class="fl">Tilbudsdato</label><input class="fi" id="mb-date" type="date"></div>
+    </div>
+    <div class="fg"><label class="fl">Notat / betingelser</label><textarea class="ft" id="mb-note"></textarea></div>
+  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('bid')">Annuller</button><button class="btn btn-primary" onclick="saveBid()">Gem tilbud</button></div>
+</div></div>
+
+<div class="overlay" id="ov-ctr">
+<div class="modal">
+  <div class="mhead"><div class="mtitle" id="mc-title">Opret kontrakt</div><button class="mclose" onclick="closeOv('ctr')">✕</button></div>
+  <div class="mbody">
+    <input type="hidden" id="mc-id"><input type="hidden" id="mc-taskid"><input type="hidden" id="mc-bidid">
+    <div class="fg"><label class="fl">Kontraktnavn *</label><input class="fi" id="mc-name"></div>
+    <div class="fg"><label class="fl">Stadie</label>
+      <select class="fs" id="mc-stage">
+        <option value="invited">Tilbud inviteret</option><option value="received">Tilbud modtaget</option>
+        <option value="accepted">Tilbud accepteret</option><option value="draft">Kontrakt udkast</option>
+        <option value="sent">Sendt til underskrift</option><option value="signed">Underskrevet</option>
+        <option value="production">Under produktion</option><option value="delivery">Levering</option>
+        <option value="closed">Afsluttet</option>
+      </select>
     </div>
     <div class="frow">
-      <div class="fg"><label class="fl">Startdato</label><input class="fi" id="mc-start" type="date"></div>
+      <div class="fg"><label class="fl">Beløb (DKK)</label><input class="fi" id="mc-amount" type="number"></div>
       <div class="fg"><label class="fl">Deadline</label><input class="fi" id="mc-dead" type="date"></div>
     </div>
-    <div class="fg"><label class="fl">Leverancebeskrivelse</label><textarea class="ft" id="mc-desc" placeholder="Hvad leverer denne leverandør?"></textarea></div>
-    <div class="fg"><label class="fl">Aftalevilkår / nøglepunkter</label><textarea class="ft" id="mc-terms" placeholder="Betalingsbetingelser, leveringskrav, ansvar, garanti..."></textarea></div>
+    <div class="fg"><label class="fl">Aftalevilkår</label><textarea class="ft" id="mc-terms" placeholder="Betalingsbetingelser, leveringskrav, garantier..."></textarea></div>
   </div>
-  <div class="mfooter">
-    <button class="btn btn-ghost" onclick="closeOv('collab')">Annuller</button>
-    <button class="btn btn-primary" onclick="saveCollab()">Gem</button>
-  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('ctr')">Annuller</button><button class="btn btn-primary" onclick="saveCtr()">Gem</button></div>
 </div></div>
 
-<!-- SUP MODAL -->
-<div class="overlay" id="ov-sup">
-<div class="modal">
-  <div class="mhead"><div class="mtitle" id="ms-title">Tilføj leverandør</div><button class="mclose" onclick="closeOv('sup')">✕</button></div>
-  <div class="mbody">
-    <input type="hidden" id="ms-id">
-    <div class="frow">
-      <div class="fg"><label class="fl">Navn *</label><input class="fi" id="ms-name" placeholder="Firmanavn"></div>
-      <div class="fg"><label class="fl">Land</label><input class="fi" id="ms-country" placeholder="Kosovo, Danmark..."></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label class="fl">CVR / Org.nr.</label><input class="fi" id="ms-cvr"></div>
-      <div class="fg"><label class="fl">Kategori</label>
-        <select class="fs" id="ms-cat">
-          <option value="produktion">Produktion</option><option value="fragt">Fragt</option>
-          <option value="tekstil">Tekstil</option><option value="materialer">Materialer</option>
-          <option value="montage">Montage</option><option value="andet">Andet</option>
-        </select>
-      </div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label class="fl">Kontaktperson</label><input class="fi" id="ms-cname"></div>
-      <div class="fg"><label class="fl">Email</label><input class="fi" id="ms-email" type="email"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label class="fl">Telefon</label><input class="fi" id="ms-phone"></div>
-      <div class="fg"><label class="fl">Status</label>
-        <select class="fs" id="ms-status">
-          <option value="active">Aktiv</option><option value="potential">Potentiel</option>
-          <option value="paused">Pauseret</option><option value="closed">Afsluttet</option>
-        </select>
-      </div>
-    </div>
-    <div class="fg"><label class="fl">Interne noter</label><textarea class="ft" id="ms-notes"></textarea></div>
-  </div>
-  <div class="mfooter">
-    <button class="btn btn-ghost" onclick="closeOv('sup')">Annuller</button>
-    <button class="btn btn-primary" onclick="saveSup()">Gem</button>
-  </div>
-</div></div>
-
-<!-- DISPUTE MODAL -->
-<div class="overlay" id="ov-disp">
-<div class="modal">
-  <div class="mhead"><div class="mtitle" id="md-title">Registrer dispute</div><button class="mclose" onclick="closeOv('disp')">✕</button></div>
-  <div class="mbody">
-    <input type="hidden" id="md-id">
-    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="md-titl" placeholder="Kort beskrivelse"></div>
-    <div class="frow">
-      <div class="fg"><label class="fl">Leverandør *</label><select class="fs" id="md-sup" onchange="updDisputeCollabs()"></select></div>
-      <div class="fg"><label class="fl">Samarbejde</label><select class="fs" id="md-col"><option value="">– Alle samarbejder –</option></select></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label class="fl">Alvorlighed</label>
-        <select class="fs" id="md-sev">
-          <option value="low">Lav</option><option value="medium" selected>Medium</option>
-          <option value="high">Høj</option><option value="critical">Kritisk</option>
-        </select>
-      </div>
-      <div class="fg"><label class="fl">Status</label>
-        <select class="fs" id="md-stat">
-          <option value="open">Åben</option><option value="processing">Under behandling</option>
-          <option value="resolved">Løst</option><option value="escalated">Eskaleret</option>
-        </select>
-      </div>
-    </div>
-    <div class="fg"><label class="fl">Omhandler</label>
-      <select class="fs" id="md-scope">
-        <option value="delivery">Hel leverance</option><option value="task">Deleopgave</option>
-        <option value="quality">Kvalitet</option><option value="payment">Betaling</option>
-        <option value="agreement">Aftaleklausul</option><option value="other">Andet</option>
-      </select>
-    </div>
-    <div class="fg"><label class="fl">Beskrivelse</label><textarea class="ft" id="md-desc"></textarea></div>
-    <div class="fg"><label class="fl">Dato</label><input class="fi" id="md-date" type="date"></div>
-  </div>
-  <div class="mfooter">
-    <button class="btn btn-ghost" onclick="closeOv('disp')">Annuller</button>
-    <button class="btn btn-primary" onclick="saveDisp()">Gem</button>
-  </div>
-</div></div>
-
-<!-- DISPUTE NOTE MODAL -->
-<div class="overlay" id="ov-dnote">
-<div class="modal">
-  <div class="mhead"><div class="mtitle">Tilføj sagsnotat</div><button class="mclose" onclick="closeOv('dnote')">✕</button></div>
-  <div class="mbody">
-    <input type="hidden" id="dn-id">
-    <div class="fg"><label class="fl">Note *</label><textarea class="ft" id="dn-text" placeholder="Opdatering, afgørelse, korrespondance..."></textarea></div>
-    <div class="fg"><label class="fl">Opdater status</label>
-      <select class="fs" id="dn-stat">
-        <option value="">– Behold nuværende –</option><option value="open">Åben</option>
-        <option value="processing">Under behandling</option><option value="resolved">Løst</option><option value="escalated">Eskaleret</option>
-      </select>
-    </div>
-  </div>
-  <div class="mfooter">
-    <button class="btn btn-ghost" onclick="closeOv('dnote')">Annuller</button>
-    <button class="btn btn-primary" onclick="saveDNote()">Tilføj</button>
-  </div>
-</div></div>
-
-<!-- ADD DOC MODAL -->
 <div class="overlay" id="ov-doc">
 <div class="modal">
   <div class="mhead"><div class="mtitle">Tilknyt dokument</div><button class="mclose" onclick="closeOv('doc')">✕</button></div>
   <div class="mbody">
-    <input type="hidden" id="ddoc-cid">
-    <input type="hidden" id="ddoc-id">
+    <input type="hidden" id="dd-cid"><input type="hidden" id="dd-did">
     <div class="fg"><label class="fl">Dokumenttype</label>
-      <select class="fs" id="ddoc-tmpl" onchange="onDocTmplChange()">
-        <option value="">– Tilpasset dokument –</option>
+      <select class="fs" id="dd-tmpl" onchange="onDocTmpl()">
+        <option value="">– Tilpasset –</option>
         <option value="framework">Subcontractor Framework Agreement</option>
         <option value="terms">General Terms and Conditions</option>
         <option value="workorder">Work Order</option>
         <option value="delivery">Material Delivery Record</option>
       </select>
     </div>
-    <div class="fg"><label class="fl">Navn</label><input class="fi" id="ddoc-name"></div>
+    <div class="fg"><label class="fl">Navn *</label><input class="fi" id="dd-name"></div>
     <div class="fg"><label class="fl">Status</label>
-      <select class="fs" id="ddoc-status">
-        <option value="template">Skabelon (ikke underskrevet)</option>
-        <option value="sent">Sendt til underskrift</option>
-        <option value="signed">Underskrevet</option>
-      </select>
+      <select class="fs" id="dd-status"><option value="template">Skabelon</option><option value="sent">Sendt til underskrift</option><option value="signed">Underskrevet</option></select>
     </div>
-    <div class="fg"><label class="fl">Link til underskrevet dokument (OneDrive/Dropbox URL)</label><input class="fi" id="ddoc-url" placeholder="https://..."></div>
-    <div class="fg"><label class="fl">Underskrevet dato</label><input class="fi" id="ddoc-sdate" type="date"></div>
+    <div class="fg"><label class="fl">Link til underskrevet dokument</label><input class="fi" id="dd-url" placeholder="https://onedrive.live.com/..."></div>
+    <div class="fg"><label class="fl">Underskrevet dato</label><input class="fi" id="dd-sdate" type="date"></div>
   </div>
-  <div class="mfooter">
-    <button class="btn btn-ghost" onclick="closeOv('doc')">Annuller</button>
-    <button class="btn btn-primary" onclick="saveDoc()">Gem</button>
-  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('doc')">Annuller</button><button class="btn btn-primary" onclick="saveDoc()">Gem</button></div>
 </div></div>
 
-<!-- SUPPLIER LINK MODAL -->
+<div class="overlay" id="ov-sup">
+<div class="modal">
+  <div class="mhead"><div class="mtitle" id="ms-title">Tilføj leverandør</div><button class="mclose" onclick="closeOv('sup')">✕</button></div>
+  <div class="mbody">
+    <input type="hidden" id="ms-id">
+    <div class="frow">
+      <div class="fg"><label class="fl">Navn *</label><input class="fi" id="ms-name"></div>
+      <div class="fg"><label class="fl">Land</label><input class="fi" id="ms-country" placeholder="Kosovo, Danmark..."></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">CVR / Org.nr.</label><input class="fi" id="ms-cvr"></div>
+      <div class="fg"><label class="fl">Kategori</label>
+        <select class="fs" id="ms-cat"><option value="produktion">Produktion</option><option value="fragt">Fragt</option><option value="tekstil">Tekstil</option><option value="materialer">Materialer</option><option value="montage">Montage</option><option value="andet">Andet</option></select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Kontaktperson</label><input class="fi" id="ms-cname"></div>
+      <div class="fg"><label class="fl">Email</label><input class="fi" id="ms-email" type="email"></div>
+    </div>
+    <div class="fg"><label class="fl">Telefon</label><input class="fi" id="ms-phone"></div>
+    <div class="fg"><label class="fl">Interne noter</label><textarea class="ft" id="ms-notes"></textarea></div>
+  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('sup')">Annuller</button><button class="btn btn-primary" onclick="saveSup()">Gem</button></div>
+</div></div>
+
+<div class="overlay" id="ov-disp">
+<div class="modal">
+  <div class="mhead"><div class="mtitle" id="md-title">Registrer dispute</div><button class="mclose" onclick="closeOv('disp')">✕</button></div>
+  <div class="mbody">
+    <input type="hidden" id="md-id">
+    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="md-titl"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Leverandør *</label><select class="fs" id="md-sup" onchange="updDispCols()"></select></div>
+      <div class="fg"><label class="fl">Kontrakt</label><select class="fs" id="md-ctr"><option value="">– Generel –</option></select></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Alvorlighed</label>
+        <select class="fs" id="md-sev"><option value="low">Lav</option><option value="medium" selected>Medium</option><option value="high">Høj</option><option value="critical">Kritisk</option></select>
+      </div>
+      <div class="fg"><label class="fl">Omhandler</label>
+        <select class="fs" id="md-scope"><option value="delivery">Leverance</option><option value="quality">Kvalitet</option><option value="payment">Betaling</option><option value="agreement">Aftaleklausul</option><option value="other">Andet</option></select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Beskrivelse</label><textarea class="ft" id="md-desc"></textarea></div>
+    <div class="fg"><label class="fl">Dato</label><input class="fi" id="md-date" type="date"></div>
+  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('disp')">Annuller</button><button class="btn btn-primary" onclick="saveDisp()">Gem</button></div>
+</div></div>
+
+<div class="overlay" id="ov-dnote">
+<div class="modal">
+  <div class="mhead"><div class="mtitle">Tilføj sagsnotat</div><button class="mclose" onclick="closeOv('dnote')">✕</button></div>
+  <div class="mbody">
+    <input type="hidden" id="dn-id">
+    <div class="fg"><label class="fl">Note *</label><textarea class="ft" id="dn-text"></textarea></div>
+    <div class="fg"><label class="fl">Opdater status</label>
+      <select class="fs" id="dn-stat"><option value="">– Behold –</option><option value="open">Åben</option><option value="processing">Under behandling</option><option value="resolved">Løst</option><option value="escalated">Eskaleret</option></select>
+    </div>
+  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('dnote')">Annuller</button><button class="btn btn-primary" onclick="saveDNote()">Tilføj</button></div>
+</div></div>
+
 <div class="overlay" id="ov-suplink">
 <div class="modal">
-  <div class="mhead"><div class="mtitle">Send aftale til leverandør</div><button class="mclose" onclick="closeOv('suplink')">✕</button></div>
+  <div class="mhead"><div class="mtitle">Send kontrakt til leverandør</div><button class="mclose" onclick="closeOv('suplink')">✕</button></div>
   <div class="mbody">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Del dette link med leverandøren. De kan se aftaledetaljer og downloade dokumenter uden at logge ind.</div>
-    <div class="fg"><label class="fl">Leverandørlink</label><div class="copy-box" id="suplink-url" onclick="this.select()"></div></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Del dette link. Leverandøren ser kontraktdetaljer og kan downloade dokumenter uden login.</div>
+    <div class="fg"><label class="fl">Leverandørlink</label><div class="copy-box" id="suplink-url"></div></div>
     <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn btn-ghost btn-sm" onclick="copySupLink()">📋 Kopier link</button>
-      <button class="btn btn-ghost btn-sm" onclick="openSupLinkPreview()">👁 Forhåndsvis</button>
+      <button class="btn btn-ghost btn-sm" onclick="copySupLink()">📋 Kopier</button>
+      <button class="btn btn-ghost btn-sm" onclick="previewSupLink()">👁 Forhåndsvis</button>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:10px">Linket indeholder alle aftaledata. Opdater linket igen efter ændringer.</div>
   </div>
-  <div class="mfooter">
-    <button class="btn btn-ghost" onclick="closeOv('suplink')">Luk</button>
-    <button class="btn btn-green" onclick="markSentAndClose()">✓ Markér som sendt</button>
-  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('suplink')">Luk</button><button class="btn btn-green" onclick="markCtrSent()">✓ Markér som sendt</button></div>
 </div></div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-// STATE & CONSTANTS
-// ═══════════════════════════════════════════════════════
-const SK = 'neminventar_suppliers_v1';
-const DV = 2;
-const EMPTY = { _version:2, suppliers:[], collaborations:[], disputes:[], templateUrls:{} };
+const SK='neminventar_sup_v3',DV=1;
+const EMPTY={_version:1,projects:[],tasks:[],bids:[],contracts:[],suppliers:[],disputes:[],templateUrls:{}};
 
-function genId(){ return '_'+Math.random().toString(36).substr(2,9); }
-
-const STAGES = [
-  {key:'contact',  label:'Kontakt',              color:'#7d8590', short:'KONTAKT'},
-  {key:'draft',    label:'Aftaleudkast',          color:'#3b82f6', short:'UDKAST'},
-  {key:'pending',  label:'Afventer underskrift',  color:'#f59e0b', short:'AFVENTER'},
-  {key:'signed',   label:'Underskrevet',          color:'#22c55e', short:'UNDERSKREVET'},
-  {key:'active',   label:'Aktiv produktion',      color:'#a855f7', short:'AKTIV'},
-  {key:'delivery', label:'Levering',              color:'#f97316', short:'LEVERING'},
-  {key:'closed',   label:'Afsluttet',             color:'#4d5562', short:'AFSLUTTET'}
-];
-
-const STEP_LABELS = ['Kontakt\netableret','Tilbud\nmodtaget','Aftale\nudkast','Sendt til\nunderskrift','Aftale\nunderskrevet','Produktion\nstartet','Levering','Afsluttet'];
-
-const SEV = {low:{l:'Lav',c:'bg'},medium:{l:'Medium',c:'by'},high:{l:'Høj',c:'bo'},critical:{l:'Kritisk',c:'br'}};
-const DST = {open:'Åben',processing:'Under behandling',resolved:'Løst',escalated:'Eskaleret'};
-const DST_CLS = {open:'br',processing:'by',resolved:'bg',escalated:'bo'};
-const AGR_DST = {template:'Skabelon',sent:'Sendt',signed:'Underskrevet'};
-const AGR_DST_CLS = {template:'bm',sent:'by',signed:'bg'};
-const CAT_ICON = {produktion:'🏭',fragt:'🚛',tekstil:'🧵',materialer:'🪵',montage:'🔧',andet:'📦'};
-const SCOPE_L = {delivery:'Hel leverance',task:'Deleopgave',quality:'Kvalitet',payment:'Betaling',agreement:'Aftaleklausul',other:'Andet'};
-const TMPL = {
-  framework:{name:'Subcontractor Framework Agreement',file:'01_Subcontractor_Framework_Agreement.docx'},
-  terms:{name:'General Terms and Conditions',file:'02_General_Terms_and_Conditions.docx'},
-  workorder:{name:'Work Order',file:'03_Work_Order_Template.docx'},
-  delivery:{name:'Material Delivery Record',file:'04_Material_Delivery_Record.docx'}
+const PROJ_STATUS={
+  active:   {label:'Aktiv',       color:'#2563eb',cls:'b-blue'},
+  planning: {label:'Planlægning', color:'#7c3aed',cls:'b-purple'},
+  completed:{label:'Afsluttet',   color:'#16a34a',cls:'b-green'},
+  paused:   {label:'Pauseret',    color:'#d97706',cls:'b-yellow'}
 };
+const CTR_STAGES=[
+  {key:'invited',   label:'Tilbud inviteret',     short:'INVITERET',    color:'#64748b',cls:'b-gray'},
+  {key:'received',  label:'Tilbud modtaget',      short:'MODTAGET',     color:'#2563eb',cls:'b-blue'},
+  {key:'accepted',  label:'Tilbud accepteret',    short:'ACCEPTERET',   color:'#7c3aed',cls:'b-purple'},
+  {key:'draft',     label:'Kontrakt udkast',      short:'UDKAST',       color:'#d97706',cls:'b-yellow'},
+  {key:'sent',      label:'Sendt til underskrift',short:'SENDT',        color:'#ea580c',cls:'b-orange'},
+  {key:'signed',    label:'Underskrevet',          short:'UNDERSKREVET', color:'#16a34a',cls:'b-green'},
+  {key:'production',label:'Under produktion',     short:'PRODUKTION',   color:'#0891b2',cls:'b-blue'},
+  {key:'delivery',  label:'Levering',             short:'LEVERING',     color:'#7c3aed',cls:'b-purple'},
+  {key:'closed',    label:'Afsluttet',            short:'AFSLUTTET',    color:'#94a3b8',cls:'b-gray'}
+];
+const TMPL={
+  framework:{name:'Subcontractor Framework Agreement',file:'01_Subcontractor_Framework_Agreement.docx'},
+  terms:    {name:'General Terms and Conditions',     file:'02_General_Terms_and_Conditions.docx'},
+  workorder:{name:'Work Order',                       file:'03_Work_Order_Template.docx'},
+  delivery: {name:'Material Delivery Record',         file:'04_Material_Delivery_Record.docx'}
+};
+const SEV={low:{l:'Lav',cls:'b-green'},medium:{l:'Medium',cls:'b-yellow'},high:{l:'Høj',cls:'b-orange'},critical:{l:'Kritisk',cls:'b-red'}};
+const DST={open:'Åben',processing:'Under behandling',resolved:'Løst',escalated:'Eskaleret'};
+const DST_CLS={open:'b-red',processing:'b-yellow',resolved:'b-green',escalated:'b-orange'};
+const CAT_ICON={produktion:'🏭',fragt:'🚛',tekstil:'🧵',materialer:'🪵',montage:'🔧',andet:'📦'};
+const SCOPE_L={delivery:'Leverance',quality:'Kvalitet',payment:'Betaling',agreement:'Aftaleklausul',other:'Andet'};
+const DOC_ST={template:'Skabelon',sent:'Sendt',signed:'Underskrevet'};
+const DOC_CLS={template:'b-gray',sent:'b-yellow',signed:'b-green'};
 
-function ls(){ try{ const s=localStorage.getItem(SK); if(s){ const p=JSON.parse(s); if((p._version||0)>=DV) return p; }} catch(e){} return JSON.parse(JSON.stringify(EMPTY)); }
-function sv(){ localStorage.setItem(SK, JSON.stringify(state)); }
-function resetAll(){ state=JSON.parse(JSON.stringify(EMPTY)); sv(); renderAll(); }
+function ls(){try{const s=localStorage.getItem(SK);if(s){const p=JSON.parse(s);if((p._version||0)>=DV)return p;}}catch(e){}return JSON.parse(JSON.stringify(EMPTY));}
+function sv(){localStorage.setItem(SK,JSON.stringify(state));}
+function resetAll(){state=JSON.parse(JSON.stringify(EMPTY));sv();nav(_page);}
+let state=ls();
 
-let state = ls();
+function genId(){return '_'+Math.random().toString(36).substr(2,9);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtD(d){if(!d)return'–';try{return new Date(d+'T12:00').toLocaleDateString('da-DK',{day:'numeric',month:'short',year:'numeric'});}catch(e){return d;}}
+function fmtM(n){if(!n&&n!==0)return'–';const v=Number(n);if(isNaN(v))return'–';if(v>=1e6)return(v/1e6).toFixed(2).replace('.',',')+' mio kr.';return v.toLocaleString('da-DK')+' kr.';}
+function timeAgo(d){if(!d)return'';const days=Math.floor((Date.now()-new Date(d+'T12:00').getTime())/86400000);if(days<1)return'I dag';if(days===1)return'I går';if(days<7)return days+'d';if(days<30)return Math.floor(days/7)+'u';return Math.floor(days/30)+'md';}
+function supName(id){const s=state.suppliers.find(s=>s.id===id);return s?s.name:'–';}
+function ctrName(id){const c=state.contracts.find(c=>c.id===id);return c?c.name:'–';}
+function stageInfo(k){return CTR_STAGES.find(s=>s.key===k)||CTR_STAGES[0];}
+function nextProjNum(){const ns=state.projects.map(p=>parseInt((p.num||'').replace('P-',''))).filter(n=>!isNaN(n));return'P-'+(Math.max(0,...ns)+1).toString().padStart(3,'0');}
+function nextTaskNum(pid){const ns=state.tasks.filter(t=>t.projectId===pid).map(t=>parseInt((t.num||'').split('.').pop())).filter(n=>!isNaN(n));const pn=(state.projects.find(p=>p.id===pid)||{}).num||'P-000';return pn+'.'+(Math.max(0,...ns)+1).toString().padStart(2,'0');}
+function nextCtrNum(){const ns=state.contracts.map(c=>parseInt((c.num||'').replace('K-',''))).filter(n=>!isNaN(n));return'K-'+(Math.max(0,...ns)+1).toString().padStart(3,'0');}
+function updateBadge(){const n=state.disputes.filter(d=>d.status==='open'||d.status==='processing').length;const b=document.getElementById('nb-disp');b.textContent=n;b.style.display=n>0?'':'none';}
 
-// ═══════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function fmtD(d){ if(!d) return '–'; return new Date(d+'T12:00:00').toLocaleDateString('da-DK',{day:'numeric',month:'short',year:'numeric'}); }
-function fmtM(n){ if(!n&&n!==0) return '–'; const v=Number(n); if(v>=1000000) return (v/1000000).toFixed(2).replace('.',',')+' mio kr.'; return v.toLocaleString('da-DK')+' kr.'; }
-function supName(id){ const s=state.suppliers.find(s=>s.id===id); return s?s.name:'–'; }
-function colName(id){ const c=state.collaborations.find(c=>c.id===id); return c?c.name:'–'; }
-function stageOf(k){ return STAGES.find(s=>s.key===k)||STAGES[0]; }
-function timeAgo(d){ if(!d) return ''; const diff=Date.now()-new Date(d+'T12:00:00').getTime(); const days=Math.floor(diff/86400000); if(days<1) return 'I dag'; if(days===1) return 'I går'; if(days<7) return days+' dage siden'; if(days<30) return Math.floor(days/7)+' uger siden'; return Math.floor(days/30)+' mdr. siden'; }
-function nextNum(){ const ns=state.collaborations.map(c=>parseInt(c.num||'0')).filter(n=>!isNaN(n)); return 'SA-'+(Math.max(0,...ns)+1).toString().padStart(3,'0'); }
+let _page='projekter';
+const PAGE_NAV_IDX={projekter:0,'projekt-detail':0,'task-detail':0,leverandoerer:1,kontrakter:2,'contract-detail':2,disputes:3,'dispute-detail':3,indstillinger:4};
 
-function updateBadge(){
-  const n=state.disputes.filter(d=>d.status==='open'||d.status==='processing').length;
-  const b=document.getElementById('nb-disp'); b.textContent=n; b.style.display=n>0?'':'none';
-}
-
-// ═══════════════════════════════════════════════════════
-// NAVIGATION
-// ═══════════════════════════════════════════════════════
-let _page = 'samarbejder';
-function showPage(name){
+function nav(name,skipRender){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const el=document.getElementById('page-'+name); if(!el) return;
-  el.classList.add('active'); _page=name;
-  const map={samarbejder:0,'collab-detail':0,leverandoerer:1,'sup-detail':1,disputes:2,'dispute-detail':2,indstillinger:3};
-  document.querySelectorAll('.nav-item')[map[name]||0]?.classList.add('active');
-  if(name==='samarbejder') renderSamarbejder();
-  else if(name==='leverandoerer') renderSups();
-  else if(name==='disputes') renderDisps();
-  else if(name==='indstillinger') renderIndstillinger();
+  const el=document.getElementById('page-'+name);if(!el)return;
+  el.classList.add('active');_page=name;
+  document.querySelectorAll('.nav-item')[PAGE_NAV_IDX[name]||0]?.classList.add('active');
+  if(!skipRender){
+    if(name==='projekter')renderProj();
+    else if(name==='leverandoerer')renderSups();
+    else if(name==='kontrakter')renderKontrakter();
+    else if(name==='disputes')renderDisps();
+    else if(name==='indstillinger')renderIndst();
+  }
   updateBadge();
 }
-function renderAll(){ showPage(_page); }
 
-// ═══════════════════════════════════════════════════════
-// SAMARBEJDER (pipeline view)
-// ═══════════════════════════════════════════════════════
-let _activeFilter = '';
-
-function renderSamarbejder(){
-  const collabs = state.collaborations;
-  document.getElementById('sa-sub').textContent = collabs.length+' samarbejder · '+collabs.filter(c=>c.stage!=='closed').length+' aktive';
-
-  // Running total
-  const pipeline = collabs.filter(c=>['contact','draft','pending'].includes(c.stage)).reduce((s,c)=>s+(+c.amount||0),0);
-  const active   = collabs.filter(c=>['signed','active','delivery'].includes(c.stage)).reduce((s,c)=>s+(+c.amount||0),0);
-  const closed   = collabs.filter(c=>c.stage==='closed').reduce((s,c)=>s+(+c.amount||0),0);
-  document.getElementById('rt-total').textContent  = fmtM(pipeline+active+closed);
-  document.getElementById('rt-pipeline').textContent = fmtM(pipeline);
-  document.getElementById('rt-active').textContent   = fmtM(active);
-  document.getElementById('rt-closed').textContent   = fmtM(closed);
-
-  // Phase tabs
-  const tabs = document.getElementById('phase-tabs');
-  tabs.innerHTML = '<span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;align-self:center">Vis faser:</span>'
-    +[{key:'',label:'Alle',color:'#7d8590'},...STAGES].map(s=>{
-      const cnt = s.key ? collabs.filter(c=>c.stage===s.key).length : collabs.length;
-      const isActive = _activeFilter===s.key;
-      return `<span class="phase-tab${isActive?' active':''}" style="${isActive?`background:${s.color||'#7d8590'};border-color:transparent;`:''}" onclick="setFilter('${s.key}')">${s.label||'Alle'} <span style="opacity:.75">${cnt}</span></span>`;
-    }).join('');
-
-  // Phase bars + cards
-  const container = document.getElementById('phase-bars-container');
-  const filtered = _activeFilter ? STAGES.filter(s=>s.key===_activeFilter) : STAGES;
-  container.innerHTML = filtered.map(st=>{
-    const cards = collabs.filter(c=>c.stage===st.key);
-    const total = cards.reduce((s,c)=>s+(+c.amount||0),0);
-    const isOpen = cards.length > 0;
-    return `<div class="phase-bar${isOpen?' open':''}" style="border-left:3px solid ${st.color}" onclick="togglePhaseBar(this)">
-      <div class="phase-bar-dot" style="background:${st.color}"></div>
-      <div class="phase-bar-name" style="color:${st.color}">${st.short}</div>
-      <div class="phase-bar-count">${cards.length}</div>
-      ${total>0?`<div class="phase-bar-amount">${fmtM(total)}</div>`:''}
-      <div class="phase-bar-chevron">${cards.length?'▶':''}</div>
+// ── PROJEKTER ──
+function renderProj(){
+  const projs=state.projects;
+  document.getElementById('proj-sub').textContent=projs.length+' projekter · '+projs.filter(p=>p.status==='active').length+' aktive';
+  const totalVal=state.contracts.reduce((s,c)=>s+(+c.amount||0),0);
+  const activeCtrs=state.contracts.filter(c=>c.stage!=='closed').length;
+  const openBids=state.bids.filter(b=>b.status==='pending').length;
+  document.getElementById('proj-stats').innerHTML=`
+    <div class="stat-box"><div class="stat-lbl">Projekter</div><div class="stat-val">${projs.length}</div><div class="stat-sub">${projs.filter(p=>p.status==='active').length} aktive</div></div>
+    <div class="stat-box"><div class="stat-lbl">Kontrakter i gang</div><div class="stat-val">${activeCtrs}</div><div class="stat-sub">${fmtM(totalVal)} samlet</div></div>
+    <div class="stat-box"><div class="stat-lbl">Afventende tilbud</div><div class="stat-val">${openBids}</div><div class="stat-sub">klar til evaluering</div></div>`;
+  const cont=document.getElementById('proj-pipeline');
+  if(!projs.length){cont.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)">Ingen projekter endnu – opret dit første projekt</div>';return;}
+  const ORDER=['active','planning','paused','completed'];
+  cont.innerHTML=ORDER.map(status=>{
+    const ps=projs.filter(p=>p.status===status);if(!ps.length)return'';
+    const si=PROJ_STATUS[status]||{label:status,color:'#64748b'};
+    const stotal=ps.reduce((s,p)=>s+state.contracts.filter(c=>c.projectId===p.id).reduce((ss,c)=>ss+(+c.amount||0),0),0);
+    return`<div class="stage-bar open" style="border-left:3px solid ${si.color}" onclick="toggleBar(this)">
+      <div class="stage-bar-dot" style="background:${si.color}"></div>
+      <div class="stage-bar-name" style="color:${si.color}">${si.label.toUpperCase()}</div>
+      <div class="stage-bar-count">${ps.length}</div>
+      ${stotal?`<div class="stage-bar-total">${fmtM(stotal)}</div>`:''}
+      <div class="stage-bar-chev">▶</div>
     </div>
-    <div class="phase-cards${isOpen?' open':''}">
-      ${cards.length ? cards.map(c=>collabCardHtml(c)).join('') : ''}
-    </div>`;
+    <div class="stage-cards open">${ps.map(projCardHtml).join('')}</div>`;
   }).join('');
 }
 
-function collabCardHtml(c){
-  const sup = state.suppliers.find(s=>s.id===c.supplierId);
-  const disps = state.disputes.filter(d=>d.collaborationId===c.id&&(d.status==='open'||d.status==='processing'));
-  const docs = (c.documents||[]);
-  const pendingDocs = docs.filter(d=>d.status==='template'||d.status==='sent').length;
-  return `<div class="collab-card" onclick="showCollabDetail('${c.id}')">
-    <div class="cc-top">
-      <span class="cc-num">${esc(c.num||'–')}</span>
-      <span class="cc-name">${esc(c.name)}</span>
-      ${c.amount?`<span class="cc-amount">${fmtM(c.amount)}</span>`:''}
+function projCardHtml(p){
+  const tasks=state.tasks.filter(t=>t.projectId===p.id);
+  const ctrs=state.contracts.filter(c=>c.projectId===p.id);
+  const pendBids=state.bids.filter(b=>tasks.some(t=>t.id===b.taskId)&&b.status==='pending').length;
+  const si=PROJ_STATUS[p.status]||{cls:'b-gray'};
+  const totalVal=ctrs.reduce((s,c)=>s+(+c.amount||0),0);
+  const signedVal=ctrs.filter(c=>['signed','production','delivery','closed'].includes(c.stage)).reduce((s,c)=>s+(+c.amount||0),0);
+  const pct=totalVal>0?Math.round(signedVal/totalVal*100):0;
+  return`<div class="proj-card" onclick="showProjDetail('${p.id}')">
+    <div class="pc-top">
+      <span class="pc-num">${esc(p.num)}</span>
+      <span class="pc-name">${esc(p.name)}</span>
+      ${totalVal?`<span class="pc-amount">${fmtM(totalVal)}</span>`:''}
     </div>
-    <div class="cc-bottom">
-      ${sup?`<span class="cc-sup">🏭 ${esc(sup.name)}</span>`:''}
-      ${c.project?`<span class="cc-proj">${esc(c.project)}</span>`:''}
-      ${c.createdAt?`<span class="cc-age">${timeAgo(c.createdAt)}</span>`:''}
-      ${c.deadline?`<span class="cc-age">📅 ${fmtD(c.deadline)}</span>`:''}
-      ${disps.length?`<span class="badge br">⚠ ${disps.length} dispute${disps.length>1?'r':''}</span>`:''}
-      ${pendingDocs?`<span class="cc-doc-badge">📄 ${pendingDocs} afv. underskrift</span>`:''}
+    <div class="pc-meta">
+      ${p.client?`<span class="pc-client">🏗 ${esc(p.client)}</span>`:''}
+      <span class="badge ${si.cls}">${PROJ_STATUS[p.status]?.label||p.status}</span>
+      <span style="font-size:11px;color:var(--muted)">${tasks.length} opgaver · ${ctrs.length} kontrakter</span>
+      ${pendBids?`<span class="badge b-yellow">💰 ${pendBids} tilbud afventer</span>`:''}
+      ${p.deadline?`<span style="font-size:11px;color:var(--muted)">📅 ${fmtD(p.deadline)}</span>`:''}
     </div>
+    ${totalVal?`<div style="display:flex;align-items:center;gap:8px">
+      <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${pct}%;background:var(--green)"></div></div>
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap">${pct}% underskrevet</span>
+    </div>`:''}
   </div>`;
 }
 
-function setFilter(key){ _activeFilter=key; renderSamarbejder(); }
+function toggleBar(bar){bar.classList.toggle('open');bar.nextElementSibling.classList.toggle('open');}
 
-function togglePhaseBar(bar){
-  bar.classList.toggle('open');
-  const cards = bar.nextElementSibling;
-  cards.classList.toggle('open');
-}
-
-// ═══════════════════════════════════════════════════════
-// COLLAB DETAIL
-// ═══════════════════════════════════════════════════════
-function showCollabDetail(id){
-  const c = state.collaborations.find(c=>c.id===id);
-  if(!c) return;
-  const sup = state.suppliers.find(s=>s.id===c.supplierId);
-  const st = stageOf(c.stage);
-  const stageIdx = STAGES.findIndex(s=>s.key===c.stage);
-  // Map stage to step index (8 steps, 7 stages)
-  const stepIdx = stageIdx;
-
-  // Stepper HTML
-  const stepperHtml = STEP_LABELS.map((lbl,i)=>{
-    const cls = i<stepIdx?'done':i===stepIdx?'cur':'fut';
-    const lCls = i<stepIdx?'done':i===stepIdx?'cur':'';
-    const lineCls = i<stepIdx?'done':'';
-    const date = c.stageDates&&c.stageDates[i] ? `<span class="step-date">${fmtD(c.stageDates[i])}</span>` : '';
-    return `<div class="step-wrap">
-      <div class="step-circle ${cls}">${i<stepIdx?'✓':i===stepIdx?'●':i+1}</div>
-      <div class="step-lbl ${lCls}">${lbl.replace('\n','<br>')}${date}</div>
-    </div>${i<STEP_LABELS.length-1?`<div class="step-line ${lineCls}"></div>`:''}`
-  }).join('');
-
-  // Stage advance options
-  const advOpts = STAGES.filter((_,i)=>i!==stageIdx).map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
-
-  // Documents
-  const docs = c.documents||[];
-  const docsHtml = docs.length ? docs.map(d=>{
-    const ds = AGR_DST_CLS[d.status]||'bm';
-    const tmpl = d.templateKey ? TMPL[d.templateKey] : null;
-    return `<div class="doc-row">
-      <div class="doc-icon">📄</div>
-      <div class="doc-info">
-        <div class="doc-name">${esc(d.name)}</div>
-        <div class="doc-meta">${tmpl?esc(tmpl.file):'Tilpasset dokument'}</div>
-      </div>
-      <span class="badge ${ds}" style="margin-right:8px">${AGR_DST[d.status]||d.status}</span>
-      ${d.signedUrl?`<a href="${esc(d.signedUrl)}" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">⬇ Download</a>`:''}
-      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditDoc('${id}','${d.id}')">Rediger</button>
-      <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteDoc('${id}','${d.id}')">✕</button>
+// ── PROJEKT DETAIL ──
+function showProjDetail(pid){
+  const p=state.projects.find(p=>p.id===pid);if(!p)return;
+  const tasks=state.tasks.filter(t=>t.projectId===pid);
+  const ctrs=state.contracts.filter(c=>c.projectId===pid);
+  const si=PROJ_STATUS[p.status]||{cls:'b-gray',label:p.status};
+  const pendBids=state.bids.filter(b=>tasks.some(t=>t.id===b.taskId)&&b.status==='pending').length;
+  const tasksHtml=tasks.length?tasks.map(t=>{
+    const tbids=state.bids.filter(b=>b.taskId===t.id);
+    const acc=tbids.find(b=>b.status==='accepted');
+    const ctr=state.contracts.find(c=>c.taskId===t.id);
+    const si2=ctr?stageInfo(ctr.stage):null;
+    return`<div class="task-row" onclick="showTaskDetail('${t.id}','${pid}')">
+      <span class="task-num">${esc(t.num||'–')}</span>
+      <span class="task-name">${esc(t.name)}</span>
+      <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        ${tbids.length?`<span class="badge b-blue">${tbids.length} tilbud</span>`:''}
+        ${state.bids.filter(b=>b.taskId===t.id&&b.status==='pending').length?`<span class="badge b-yellow">⏳</span>`:''}
+        ${acc&&!ctr?`<span class="badge b-purple">✓ tilbud accepteret</span>`:''}
+        ${ctr?`<span class="badge ${si2.cls}">${si2.label}</span>`:''}
+      </span>
+      ${t.estimatedAmount?`<span class="task-est">${fmtM(t.estimatedAmount)}</span>`:''}
     </div>`;
-  }).join('') : '<div style="color:var(--muted);font-size:13px;padding:12px 0">Ingen dokumenter tilknyttet endnu</div>';
+  }).join(''):'<div style="padding:20px 18px;color:var(--muted);font-size:13px">Ingen opgaver endnu</div>';
 
-  // Disputes
-  const disps = state.disputes.filter(d=>d.collaborationId===id);
-  const dispsHtml = disps.length ? disps.map(d=>{
-    const sv = SEV[d.severity]||SEV.medium;
-    return `<tr>
-      <td><span style="cursor:pointer;color:var(--blue);font-weight:600" onclick="showDispDetail('${d.id}')">${esc(d.title)}</span></td>
-      <td><span class="badge ${sv.c}">${sv.l}</span></td>
-      <td><span class="badge ${DST_CLS[d.status]||'bm'}">${DST[d.status]||d.status}</span></td>
-      <td>${fmtD(d.createdAt)}</td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="4" class="empty-row">Ingen disputes</td></tr>';
-
-  document.getElementById('collab-detail-content').innerHTML = `
+  document.getElementById('proj-detail-content').innerHTML=`
     <div class="detail-hero">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
         <div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-            <span style="font-size:11px;font-weight:700;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:2px 7px">${esc(c.num||'–')}</span>
-            <span style="font-size:18px;font-weight:700">${esc(c.name)}</span>
-            <span class="badge" style="background:${st.color}22;color:${st.color}">${st.label}</span>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+            <span style="font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:2px 7px">${esc(p.num)}</span>
+            <span style="font-size:20px;font-weight:700">${esc(p.name)}</span>
+            <span class="badge ${si.cls}">${si.label}</span>
           </div>
-          <div style="font-size:12px;color:var(--muted)">${sup?esc(sup.name):'–'}${c.project?' · '+esc(c.project):''}${c.amount?' · '+fmtM(c.amount):''}</div>
+          <div style="font-size:13px;color:var(--muted)">${[p.client,p.deadline?'Deadline '+fmtD(p.deadline):''].filter(Boolean).join(' · ')}</div>
         </div>
         <div style="display:flex;gap:7px">
-          <button class="btn btn-green btn-sm" onclick="openSupLink('${id}')">🔗 Send til leverandør</button>
-          <button class="btn btn-ghost btn-sm" onclick="openEditCollab('${id}')">Rediger</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteCollab('${id}')">Slet</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditProj('${pid}')">Rediger</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProj('${pid}')">Slet</button>
         </div>
       </div>
-      <div style="margin-bottom:14px">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Samarbejdets forløb</div>
-        <div class="stepper">${stepperHtml}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--border)">
-        <span style="font-size:11px;color:var(--muted)">Flyt til stadie:</span>
-        <select class="fs" style="width:auto;font-size:12px;padding:5px 10px" id="adv-${id}">${advOpts}</select>
-        <button class="btn btn-primary btn-sm" onclick="advanceStage('${id}')">Opdater</button>
+      <div class="two-col" style="margin:0">
+        <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Nøgletal</div>
+          <div style="display:flex;gap:24px">
+            <div><div style="font-size:18px;font-weight:700">${tasks.length}</div><div style="font-size:11px;color:var(--muted)">Opgaver</div></div>
+            <div><div style="font-size:18px;font-weight:700">${ctrs.length}</div><div style="font-size:11px;color:var(--muted)">Kontrakter</div></div>
+            <div><div style="font-size:18px;font-weight:700;${pendBids?'color:var(--yellow)':''}">${pendBids}</div><div style="font-size:11px;color:var(--muted)">Afv. tilbud</div></div>
+          </div>
+        </div>
+        ${p.description?`<div style="background:var(--bg);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.6">${esc(p.description)}</div>`:'<div></div>'}
       </div>
     </div>
+    <div class="section-card">
+      <div class="section-head"><div class="section-title">Opgaver (${tasks.length})</div><button class="btn btn-primary btn-sm" onclick="openNewTask('${pid}')">+ Tilføj opgave</button></div>
+      ${tasksHtml}
+    </div>`;
+  nav('projekt-detail',true);
+}
 
-    <div class="two-col" style="margin-bottom:14px">
-      <div class="card">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Detaljer</div>
+// ── TASK DETAIL ──
+let _taskProjId=null;
+function showTaskDetail(tid,projId){
+  _taskProjId=projId;
+  const t=state.tasks.find(t=>t.id===tid);if(!t)return;
+  const p=state.projects.find(p=>p.id===t.projectId);
+  const bids=state.bids.filter(b=>b.taskId===tid);
+  const acc=bids.find(b=>b.status==='accepted');
+  const ctr=state.contracts.find(c=>c.taskId===tid);
+  document.getElementById('task-back-btn').onclick=()=>showProjDetail(t.projectId);
+  const bidsHtml=bids.length?`<table>
+    <thead><tr><th>Leverandør</th><th>Beløb</th><th>Dato</th><th>Note</th><th>Status</th><th></th></tr></thead>
+    <tbody>${bids.map(b=>`<tr>
+      <td style="font-weight:500">${esc(supName(b.supplierId))}</td>
+      <td style="font-weight:700">${fmtM(b.amount)}</td>
+      <td>${fmtD(b.submittedAt)}</td>
+      <td style="color:var(--muted);max-width:180px">${esc(b.note||'–')}</td>
+      <td><span class="badge ${b.status==='accepted'?'b-green':b.status==='rejected'?'b-red':'b-yellow'}">${b.status==='accepted'?'Accepteret':b.status==='rejected'?'Afvist':'Afventer'}</span></td>
+      <td style="display:flex;gap:4px">${b.status==='pending'?`<button class="btn btn-green btn-xs" onclick="acceptBid('${b.id}','${tid}')">✓ Accepter</button><button class="btn btn-danger btn-xs" onclick="rejectBid('${b.id}','${tid}')">✕</button>`:''}</td>
+    </tr>`).join('')}</tbody>
+  </table>`:'<div style="padding:16px;color:var(--muted);font-size:13px">Ingen tilbud endnu</div>';
+  document.getElementById('task-detail-content').innerHTML=`
+    <div class="detail-hero">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:2px 6px">${esc(t.num||'–')}</span>
+            <span style="font-size:17px;font-weight:700">${esc(t.name)}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted)">${p?esc(p.name):''}${t.estimatedAmount?' · Est. '+fmtM(t.estimatedAmount):''}${t.unit&&t.qty?' · '+t.qty+' '+t.unit:''}</div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-ghost btn-sm" onclick="openEditTask('${tid}')">Rediger</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTask('${tid}')">Slet</button>
+        </div>
+      </div>
+      ${t.description?`<div style="margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:8px;font-size:13px;color:var(--muted);line-height:1.7;white-space:pre-wrap">${esc(t.description)}</div>`:''}
+    </div>
+    <div class="section-card">
+      <div class="section-head"><div class="section-title">Tilbud (${bids.length})</div><button class="btn btn-primary btn-sm" onclick="openNewBid('${tid}')">+ Registrer tilbud</button></div>
+      ${bidsHtml}
+    </div>
+    ${ctr?`<div class="section-card">
+      <div class="section-head"><div class="section-title">Kontrakt: ${esc(ctr.num)} – ${esc(ctr.name)}</div><button class="btn btn-ghost btn-sm" onclick="showContractDetail('${ctr.id}','task-detail')">Åbn kontrakt →</button></div>
+      <div style="padding:16px 18px">${buildStepper(ctr.stage)}</div>
+    </div>`:acc?`<div class="card card-pad" style="background:var(--blue-light);border-color:var(--blue-mid)">
+      <div style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:6px">✓ Tilbud accepteret – klar til kontrakt</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Leverandør: ${esc(supName(acc.supplierId))} · ${fmtM(acc.amount)}</div>
+      <button class="btn btn-primary btn-sm" onclick="openNewCtrFromBid('${tid}','${acc.id}')">+ Opret kontrakt</button>
+    </div>`:''}`;
+  nav('task-detail',true);
+}
+
+function buildStepper(curStage){
+  const ci=CTR_STAGES.findIndex(s=>s.key===curStage);
+  return'<div class="stepper">'+CTR_STAGES.map((s,i)=>{
+    const cls=i<ci?'done':i===ci?'cur':'';
+    return`<div class="st-item">
+      <div class="st-circle ${cls}">${i<ci?'✓':i===ci?'●':i+1}</div>
+      <div class="st-lbl ${cls}">${s.label}</div>
+    </div>${i<CTR_STAGES.length-1?`<div class="st-line ${i<ci?'done':''}"></div>`:''}`
+  }).join('')+'</div>';
+}
+
+function acceptBid(bid,tid){
+  state.bids.forEach(b=>{if(b.taskId===tid)b.status='rejected';});
+  const b=state.bids.find(b=>b.id===bid);if(b)b.status='accepted';
+  sv();showTaskDetail(tid,_taskProjId);
+}
+function rejectBid(bid,tid){const b=state.bids.find(b=>b.id===bid);if(b)b.status='rejected';sv();showTaskDetail(tid,_taskProjId);}
+
+// ── CONTRACT DETAIL ──
+let _ctrBack='kontrakter';
+function showContractDetail(cid,backTo){
+  _ctrBack=backTo||'kontrakter';
+  const c=state.contracts.find(c=>c.id===cid);if(!c)return;
+  const sup=state.suppliers.find(s=>s.id===c.supplierId)||{};
+  const task=state.tasks.find(t=>t.id===c.taskId);
+  const proj=task?state.projects.find(p=>p.id===task.projectId):state.projects.find(p=>p.id===c.projectId);
+  const si=stageInfo(c.stage);
+  const docs=c.documents||[];
+  const disps=state.disputes.filter(d=>d.contractId===cid);
+  document.getElementById('ctr-back-btn').onclick=()=>nav(_ctrBack);
+  const docsHtml=docs.length?docs.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)">
+    <span style="font-size:18px">📄</span>
+    <div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(d.name)}</div><div style="font-size:11px;color:var(--muted)">${d.templateKey&&TMPL[d.templateKey]?esc(TMPL[d.templateKey].file):'Tilpasset'}</div></div>
+    <span class="badge ${DOC_CLS[d.status]||'b-gray'}">${DOC_ST[d.status]||d.status}</span>
+    ${d.signedUrl?`<a href="${esc(d.signedUrl)}" target="_blank" class="btn btn-ghost btn-xs">⬇</a>`:''}
+    <button class="btn btn-ghost btn-xs" onclick="openEditDoc('${cid}','${d.id}')">Rediger</button>
+    <button class="btn btn-danger btn-xs" onclick="delDoc('${cid}','${d.id}')">✕</button>
+  </div>`).join(''):'<div style="padding:12px 0;color:var(--muted);font-size:13px">Ingen dokumenter endnu</div>';
+
+  document.getElementById('contract-detail-content').innerHTML=`
+    <div class="detail-hero">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+            <span style="font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:2px 7px">${esc(c.num)}</span>
+            <span style="font-size:18px;font-weight:700">${esc(c.name)}</span>
+            <span class="badge ${si.cls}">${si.label}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted)">${esc(sup.name||'–')}${proj?' · '+esc(proj.name):''}${c.amount?' · '+fmtM(c.amount):''}</div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-green btn-sm" onclick="openSupLink('${cid}')">🔗 Send til leverandør</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditCtr('${cid}')">Rediger</button>
+          <button class="btn btn-danger btn-sm" onclick="delCtr('${cid}')">Slet</button>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">${buildStepper(c.stage)}</div>
+      <div style="display:flex;align-items:center;gap:8px;padding-top:14px;border-top:1px solid var(--border)">
+        <span style="font-size:12px;color:var(--muted)">Flyt til:</span>
+        <select class="fs" style="width:auto;font-size:12px;padding:5px 10px" id="adv-${cid}">
+          ${CTR_STAGES.filter(s=>s.key!==c.stage).map(s=>`<option value="${s.key}">${s.label}</option>`).join('')}
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="advanceCtr('${cid}')">Opdater stadie</button>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="card card-pad">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Detaljer</div>
         <table style="font-size:12.5px"><tbody>
-          <tr><td style="color:var(--muted);padding:4px 0;white-space:nowrap">Leverandør</td><td style="padding:4px 0 4px 12px">${sup?esc(sup.name):'–'}</td></tr>
-          <tr><td style="color:var(--muted);padding:4px 0">Projekt</td><td style="padding:4px 0 4px 12px">${esc(c.project||'–')}</td></tr>
-          <tr><td style="color:var(--muted);padding:4px 0">Beløb</td><td style="padding:4px 0 4px 12px">${fmtM(c.amount)}</td></tr>
-          <tr><td style="color:var(--muted);padding:4px 0">Startdato</td><td style="padding:4px 0 4px 12px">${fmtD(c.startDate)}</td></tr>
+          <tr><td style="color:var(--muted);padding:4px 0;white-space:nowrap">Leverandør</td><td style="padding:4px 0 4px 12px">${esc(sup.name||'–')}</td></tr>
+          <tr><td style="color:var(--muted);padding:4px 0">Projekt</td><td style="padding:4px 0 4px 12px">${proj?esc(proj.name):'–'}</td></tr>
+          ${task?`<tr><td style="color:var(--muted);padding:4px 0">Opgave</td><td style="padding:4px 0 4px 12px">${esc(task.name)}</td></tr>`:''}
+          <tr><td style="color:var(--muted);padding:4px 0">Beløb</td><td style="padding:4px 0 4px 12px;font-weight:700">${fmtM(c.amount)}</td></tr>
           <tr><td style="color:var(--muted);padding:4px 0">Deadline</td><td style="padding:4px 0 4px 12px">${fmtD(c.deadline)}</td></tr>
-          ${c.linkSentAt?`<tr><td style="color:var(--muted);padding:4px 0">Link sendt</td><td style="padding:4px 0 4px 12px">${fmtD(c.linkSentAt)}</td></tr>`:''}
+          ${c.linkSentAt?`<tr><td style="color:var(--muted);padding:4px 0">Sendt</td><td style="padding:4px 0 4px 12px">${fmtD(c.linkSentAt)}</td></tr>`:''}
         </tbody></table>
       </div>
-      <div class="card">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Aftalevilkår</div>
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;white-space:pre-wrap">${esc(c.terms||'Ingen vilkår tilføjet')}</div>
+      <div class="card card-pad">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Aftalevilkår</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.65;white-space:pre-wrap">${esc(c.terms||'Ingen vilkår tilføjet')}</div>
       </div>
     </div>
-
-    <div class="section-card" style="margin-bottom:14px">
-      <div class="section-head">
-        <div class="section-head-title">Dokumenter (${docs.length})</div>
-        <button class="btn btn-ghost btn-sm" onclick="openNewDoc('${id}')">+ Tilknyt dokument</button>
-      </div>
-      <div style="padding:0 16px">${docsHtml}</div>
-    </div>
-
     <div class="section-card">
-      <div class="section-head">
-        <div class="section-head-title">Disputes (${disps.length})</div>
-        <button class="btn btn-ghost btn-sm" onclick="openNewDispute('${c.supplierId}','${id}')">+ Registrer dispute</button>
-      </div>
-      <table><thead><tr><th>Titel</th><th>Alvorlighed</th><th>Status</th><th>Oprettet</th></tr></thead>
-      <tbody>${dispsHtml}</tbody></table>
+      <div class="section-head"><div class="section-title">Dokumenter (${docs.length})</div><button class="btn btn-primary btn-sm" onclick="openNewDoc('${cid}')">+ Tilknyt dokument</button></div>
+      <div style="padding:0 18px">${docsHtml}</div>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><div class="section-title">Disputes (${disps.length})</div><button class="btn btn-ghost btn-sm" onclick="openNewDisp('${c.supplierId}','${cid}')">+ Registrer dispute</button></div>
+      <table><thead><tr><th>Titel</th><th>Alvorlighed</th><th>Status</th><th>Dato</th></tr></thead>
+      <tbody>${disps.length?disps.map(d=>`<tr>
+        <td><span style="cursor:pointer;color:var(--blue);font-weight:600" onclick="showDispDetail('${d.id}')">${esc(d.title)}</span></td>
+        <td><span class="badge ${(SEV[d.severity]||SEV.medium).cls}">${(SEV[d.severity]||SEV.medium).l}</span></td>
+        <td><span class="badge ${DST_CLS[d.status]||'b-gray'}">${DST[d.status]||d.status}</span></td>
+        <td>${fmtD(d.createdAt)}</td>
+      </tr>`).join(''):'<tr><td colspan="4" class="empty-row">Ingen disputes</td></tr>'}</tbody>
+      </table>
     </div>`;
-
-  showPage('collab-detail');
+  nav('contract-detail',true);
 }
 
-function advanceStage(id){
-  const sel=document.getElementById('adv-'+id); if(!sel) return;
-  const c=state.collaborations.find(c=>c.id===id); if(!c) return;
-  const newStage=sel.value;
-  if(!c.stageDates) c.stageDates={};
-  const newIdx=STAGES.findIndex(s=>s.key===newStage);
-  c.stageDates[newIdx]=new Date().toISOString().split('T')[0];
-  c.stage=newStage; sv(); showCollabDetail(id);
+function advanceCtr(id){
+  const sel=document.getElementById('adv-'+id);if(!sel)return;
+  const c=state.contracts.find(c=>c.id===id);if(!c)return;
+  c.stage=sel.value;if(!c.stageDates)c.stageDates={};c.stageDates[sel.value]=new Date().toISOString().split('T')[0];
+  sv();showContractDetail(id,_ctrBack);
 }
 
-// ═══════════════════════════════════════════════════════
-// SUPPLIER LINK
-// ═══════════════════════════════════════════════════════
-let _curLinkCollabId = null;
-
-function buildSupplierLink(id){
-  const c=state.collaborations.find(c=>c.id===id);
-  if(!c) return '';
-  const sup=state.suppliers.find(s=>s.id===c.supplierId)||{};
-  const docs=(c.documents||[]).map(d=>{
-    const tmpl=d.templateKey?TMPL[d.templateKey]:null;
-    const tmplUrl=state.templateUrls&&state.templateUrls[d.templateKey]||'';
-    return {name:d.name,status:d.status,signedUrl:d.signedUrl||'',templateUrl:tmplUrl,file:tmpl?tmpl.file:''};
-  });
-  const data={
-    num:c.num,name:c.name,project:c.project||'',
-    amount:c.amount||0,stage:stageOf(c.stage).label,
-    startDate:c.startDate||'',deadline:c.deadline||'',
-    terms:c.terms||'',description:c.description||'',
-    supplierName:sup.name||'',supplierContact:sup.contactName||'',
-    docs,generatedAt:new Date().toISOString().split('T')[0]
-  };
-  try{
-    const enc=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-    return window.location.origin+window.location.pathname+'#supplier/'+enc;
-  } catch(e){ return ''; }
-}
-
-function openSupLink(id){
-  _curLinkCollabId=id;
-  const url=buildSupplierLink(id);
-  document.getElementById('suplink-url').textContent=url;
-  openOv('suplink');
-}
-function copySupLink(){
-  const url=document.getElementById('suplink-url').textContent;
-  navigator.clipboard?.writeText(url).then(()=>alert('Link kopieret!'));
-}
-function openSupLinkPreview(){
-  const url=document.getElementById('suplink-url').textContent;
-  window.open(url,'_blank');
-}
-function markSentAndClose(){
-  if(!_curLinkCollabId) return;
-  const c=state.collaborations.find(c=>c.id===_curLinkCollabId);
-  if(c){ c.linkSentAt=new Date().toISOString().split('T')[0]; if(c.stage==='draft') c.stage='pending'; sv(); }
-  closeOv('suplink');
-  showCollabDetail(_curLinkCollabId);
-}
-
-// ═══════════════════════════════════════════════════════
-// SUPPLIER VIEW (public page)
-// ═══════════════════════════════════════════════════════
-function renderSupplierView(data){
-  document.getElementById('admin-app').style.display='none';
-  document.getElementById('supplier-view').style.display='block';
-  document.body.classList.add('sv-body');
-  document.title='Aftale – NemInventar ApS';
-
-  const stageBar = ['Kontakt','Aftaleudkast','Afventer underskrift','Underskrevet','Produktion','Levering','Afsluttet'];
-  const curIdx = stageBar.findIndex(s=>s===data.stage)||0;
-  const stepHtml = stageBar.map((s,i)=>{
-    const bg=i<curIdx?'#22c55e':i===curIdx?'#2563eb':'#e2e8f0';
-    const col=i<=curIdx?'#fff':'#94a3b8';
-    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:60px">
-      <div style="width:26px;height:26px;border-radius:50%;background:${bg};color:${col};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${i<curIdx?'✓':i+1}</div>
-      <div style="font-size:9px;margin-top:4px;text-align:center;color:${i===curIdx?'#2563eb':'#94a3b8'};font-weight:${i===curIdx?'700':'400'};line-height:1.3">${s}</div>
-    </div>${i<stageBar.length-1?'<div style="flex:1;height:2px;background:'+(i<curIdx?'#22c55e':'#e2e8f0')+';margin-top:12px;min-width:4px"></div>':''}`
+// ── KONTRAKTER CLM ──
+function renderKontrakter(){
+  const cont=document.getElementById('kontr-pipeline');
+  if(!state.contracts.length){cont.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)">Ingen kontrakter endnu</div>';return;}
+  cont.innerHTML=CTR_STAGES.map(st=>{
+    const ctrs=state.contracts.filter(c=>c.stage===st.key);
+    const total=ctrs.reduce((s,c)=>s+(+c.amount||0),0);
+    return`<div class="stage-bar${ctrs.length?' open':''}" style="border-left:3px solid ${st.color}" onclick="toggleBar(this)">
+      <div class="stage-bar-dot" style="background:${st.color}"></div>
+      <div class="stage-bar-name" style="color:${st.color}">${st.short}</div>
+      <div class="stage-bar-count">${ctrs.length}</div>
+      ${total?`<div class="stage-bar-total">${fmtM(total)}</div>`:''}
+      <div class="stage-bar-chev">${ctrs.length?'▶':''}</div>
+    </div>
+    <div class="stage-cards${ctrs.length?' open':''}">
+      ${ctrs.map(c=>{
+        const sup=state.suppliers.find(s=>s.id===c.supplierId)||{};
+        const proj=state.projects.find(p=>p.id===c.projectId)||{};
+        return`<div class="proj-card" onclick="showContractDetail('${c.id}')">
+          <div class="pc-top"><span class="pc-num">${esc(c.num)}</span><span class="pc-name">${esc(c.name)}</span>${c.amount?`<span class="pc-amount">${fmtM(c.amount)}</span>`:''}</div>
+          <div class="pc-meta">
+            <span class="pc-client">🏭 ${esc(sup.name||'–')}</span>
+            ${proj.name?`<span class="badge b-blue">${esc(proj.name)}</span>`:''}
+            ${c.deadline?`<span style="font-size:11px;color:var(--muted)">📅 ${fmtD(c.deadline)}</span>`:''}
+            ${c.linkSentAt?`<span class="badge b-green">🔗 Link sendt</span>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
   }).join('');
-
-  const docsHtml = (data.docs||[]).map(d=>{
-    const url=d.signedUrl||d.templateUrl||'';
-    if(!url) return `<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;margin-bottom:8px">
-      <span style="font-size:20px">📄</span>
-      <div style="flex:1"><div style="font-size:13px;font-weight:600;color:#1e293b">${esc(d.name)}</div><div style="font-size:11px;color:#94a3b8">${esc(d.file||'Tilpasset dokument')} · ${d.status==='signed'?'Underskrevet':d.status==='sent'?'Afventer underskrift':'Skabelon'}</div></div>
-      <span style="font-size:11px;color:#94a3b8">Intet link</span>
-    </div>`;
-    return `<a href="${esc(url)}" target="_blank" class="sv-doc-btn">
-      <span style="font-size:20px">📄</span>
-      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(d.name)}</div><div style="font-size:11px;color:#64748b">${esc(d.file||'Dokument')} · ${d.status==='signed'?'✓ Underskrevet':'Download'}</div></div>
-      <span style="font-size:13px">⬇</span>
-    </a>`;
-  }).join('');
-
-  document.getElementById('supplier-view').innerHTML = `
-    <div style="background:#f1f5f9;min-height:100vh;padding:32px 16px">
-      <div class="sv-card">
-        <div class="sv-header">
-          <div class="sv-logo">🤝 NemInventar ApS</div>
-          <div class="sv-tagline">Aftale sendt til dig af NemInventar</div>
-        </div>
-        <div class="sv-body-inner">
-          <div style="overflow-x:auto;margin-bottom:28px">
-            <div style="display:flex;align-items:flex-start;min-width:400px">${stepHtml}</div>
-          </div>
-
-          <div class="sv-section">
-            <div class="sv-section-title">Aftaleoplysninger</div>
-            <div class="sv-row"><span class="sv-label">Aftalenummer</span><span class="sv-value">${esc(data.num||'–')}</span></div>
-            <div class="sv-row"><span class="sv-label">Navn</span><span class="sv-value">${esc(data.name)}</span></div>
-            <div class="sv-row"><span class="sv-label">Projekt</span><span class="sv-value">${esc(data.project||'–')}</span></div>
-            <div class="sv-row"><span class="sv-label">Status</span><span class="sv-value">${esc(data.stage)}</span></div>
-            ${data.amount?`<div class="sv-row"><span class="sv-label">Beløb</span><span class="sv-value">${Number(data.amount).toLocaleString('da-DK')} kr.</span></div>`:''}
-            ${data.startDate?`<div class="sv-row"><span class="sv-label">Startdato</span><span class="sv-value">${new Date(data.startDate+'T12:00:00').toLocaleDateString('da-DK')}</span></div>`:''}
-            ${data.deadline?`<div class="sv-row"><span class="sv-label">Deadline</span><span class="sv-value">${new Date(data.deadline+'T12:00:00').toLocaleDateString('da-DK')}</span></div>`:''}
-          </div>
-
-          ${data.terms?`<div class="sv-section">
-            <div class="sv-section-title">Aftalevilkår</div>
-            <div style="font-size:13px;color:#475569;line-height:1.7;white-space:pre-wrap;background:#f8fafc;padding:14px 16px;border-radius:8px;border:1px solid #e2e8f0">${esc(data.terms)}</div>
-          </div>`:''}
-
-          ${data.description?`<div class="sv-section">
-            <div class="sv-section-title">Leverancebeskrivelse</div>
-            <div style="font-size:13px;color:#475569;line-height:1.7">${esc(data.description)}</div>
-          </div>`:''}
-
-          ${(data.docs||[]).length?`<div class="sv-section">
-            <div class="sv-section-title">Dokumenter</div>
-            ${docsHtml}
-          </div>`:''}
-
-          <div class="sv-section">
-            <div class="sv-section-title">Kontakt</div>
-            <div style="font-size:13px;color:#475569">Har du spørgsmål til denne aftale, kontakt os på:<br><a href="mailto:kontakt@neminventar.dk" style="color:#2563eb;font-weight:600">kontakt@neminventar.dk</a></div>
-          </div>
-        </div>
-        <div class="sv-footer">Genereret af NemInventar ApS · Dokument genereret ${esc(data.generatedAt||'')} · Dette link er personligt og bør ikke deles videre</div>
-      </div>
-    </div>`;
 }
 
-// ═══════════════════════════════════════════════════════
-// LEVERANDØRER
-// ═══════════════════════════════════════════════════════
+// ── LEVERANDØRER ──
 function renderSups(){
-  const q=(document.getElementById('sup-search')||{}).value||'';
-  const fc=(document.getElementById('sup-fcat')||{}).value||'';
-  const list=state.suppliers.filter(s=>{
-    if(fc&&s.cat!==fc) return false;
-    if(q&&!s.name.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  });
   const el=document.getElementById('sups-list');
-  el.innerHTML=list.length?list.map(s=>{
-    const nc=state.collaborations.filter(c=>c.supplierId===s.id).length;
+  if(!state.suppliers.length){el.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)">Ingen leverandører endnu</div>';return;}
+  el.innerHTML=state.suppliers.map(s=>{
+    const nc=state.contracts.filter(c=>c.supplierId===s.id).length;
     const nd=state.disputes.filter(d=>d.supplierId===s.id&&(d.status==='open'||d.status==='processing')).length;
-    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .13s;margin-bottom:9px" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'" onclick="showSupDetail('${s.id}')">
-      <div style="width:38px;height:38px;border-radius:9px;background:var(--bd);border:1px solid var(--blue);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${CAT_ICON[s.cat]||'📦'}</div>
+    return`<div class="proj-card" style="margin-bottom:8px;display:flex;align-items:center;gap:14px">
+      <div style="width:40px;height:40px;border-radius:10px;background:var(--blue-light);border:1px solid var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${CAT_ICON[s.cat]||'📦'}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600">${esc(s.name)}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:1px">${[s.country,s.cname,s.email].filter(Boolean).join(' · ')}</div>
+        <div style="font-size:14px;font-weight:600">${esc(s.name)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${[s.country,s.cname,s.email].filter(Boolean).join(' · ')}</div>
       </div>
-      <div style="display:flex;gap:16px;margin:0 12px">
-        <div style="text-align:center"><div style="font-size:14px;font-weight:700">${nc}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">Samarbejder</div></div>
-        <div style="text-align:center"><div style="font-size:14px;font-weight:700;${nd>0?'color:var(--red)':''}">${nd}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">Disputes</div></div>
+      <div style="display:flex;gap:20px;margin:0 14px;text-align:center">
+        <div><div style="font-size:16px;font-weight:700">${nc}</div><div style="font-size:10px;color:var(--muted)">Kontrakter</div></div>
+        <div><div style="font-size:16px;font-weight:700;${nd?'color:var(--red)':''}">${nd}</div><div style="font-size:10px;color:var(--muted)">Disputes</div></div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditSup('${s.id}')">Rediger</button>
+      <button class="btn btn-ghost btn-sm" onclick="openEditSup('${s.id}')">Rediger</button>
+      <button class="btn btn-danger btn-sm" onclick="if(confirm('Slet?'))deleteSup('${s.id}')">Slet</button>
     </div>`;
-  }).join('') : '<div style="text-align:center;padding:48px;color:var(--muted)">Ingen leverandører endnu</div>';
+  }).join('');
 }
 
-function showSupDetail(id){
-  const s=state.suppliers.find(s=>s.id===id); if(!s) return;
-  const collabs=state.collaborations.filter(c=>c.supplierId===id);
-  const disps=state.disputes.filter(d=>d.supplierId===id);
-  document.getElementById('sup-detail-content').innerHTML=`
-    <div class="detail-hero" style="margin-bottom:16px">
-      <div style="display:flex;align-items:flex-start;gap:14px">
-        <div style="width:48px;height:48px;border-radius:11px;background:var(--bd);border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${CAT_ICON[s.cat]||'📦'}</div>
-        <div style="flex:1">
-          <div style="font-size:18px;font-weight:700;margin-bottom:3px">${esc(s.name)}</div>
-          <div style="font-size:12px;color:var(--muted)">${[s.country,s.cvr,s.cname,s.email,s.phone].filter(Boolean).join(' · ')}</div>
-          ${s.notes?`<div style="font-size:12px;color:var(--muted);background:var(--surface);padding:8px 11px;border-radius:7px;margin-top:8px">${esc(s.notes)}</div>`:''}
-        </div>
-        <div style="display:flex;gap:7px">
-          <button class="btn btn-ghost btn-sm" onclick="openEditSup('${id}')">Rediger</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteSup('${id}')">Slet</button>
-        </div>
-      </div>
-    </div>
-    <div class="section-card" style="margin-bottom:14px">
-      <div class="section-head"><div class="section-head-title">Samarbejder (${collabs.length})</div><button class="btn btn-ghost btn-sm" onclick="openNewCollab('${id}')">+ Nyt</button></div>
-      <table><thead><tr><th>Nr.</th><th>Navn</th><th>Projekt</th><th>Stadie</th><th>Beløb</th></tr></thead>
-      <tbody>${collabs.length?collabs.map(c=>{const cs=stageOf(c.stage);return`<tr><td style="color:var(--muted)">${esc(c.num||'–')}</td><td><span style="cursor:pointer;color:var(--blue);font-weight:600" onclick="showCollabDetail('${c.id}')">${esc(c.name)}</span></td><td>${esc(c.project||'–')}</td><td><span class="badge" style="background:${cs.color}22;color:${cs.color}">${cs.label}</span></td><td>${fmtM(c.amount)}</td></tr>`;}).join(''):'<tr><td colspan="5" class="empty-row">Ingen samarbejder</td></tr>'}</tbody>
-      </table>
-    </div>
-    <div class="section-card">
-      <div class="section-head"><div class="section-head-title">Disputes (${disps.length})</div><button class="btn btn-ghost btn-sm" onclick="openNewDispute('${id}',null)">+ Registrer</button></div>
-      <table><thead><tr><th>Titel</th><th>Alvorlighed</th><th>Status</th><th>Oprettet</th></tr></thead>
-      <tbody>${disps.length?disps.map(d=>{const sv=SEV[d.severity]||SEV.medium;return`<tr><td><span style="cursor:pointer;color:var(--blue);font-weight:600" onclick="showDispDetail('${d.id}')">${esc(d.title)}</span></td><td><span class="badge ${sv.c}">${sv.l}</span></td><td><span class="badge ${DST_CLS[d.status]||'bm'}">${DST[d.status]||d.status}</span></td><td>${fmtD(d.createdAt)}</td></tr>`;}).join(''):'<tr><td colspan="4" class="empty-row">Ingen disputes</td></tr>'}</tbody>
-      </table>
-    </div>`;
-  showPage('sup-detail');
-}
-
-// ═══════════════════════════════════════════════════════
-// DISPUTES
-// ═══════════════════════════════════════════════════════
+// ── DISPUTES ──
 function renderDisps(){
-  const fs=(document.getElementById('df-status')||{}).value||'';
-  const fv=(document.getElementById('df-sev')||{}).value||'';
-  let list=state.disputes.filter(d=>{
-    if(fs&&d.status!==fs) return false;
-    if(fv&&d.severity!==fv) return false;
-    return true;
-  }).sort((a,b)=>({critical:0,high:1,medium:2,low:3}[a.severity]||2)-({critical:0,high:1,medium:2,low:3}[b.severity]||2));
-  const tbody=document.getElementById('disps-tbody');
-  tbody.innerHTML=list.length?list.map(d=>{
+  const list=state.disputes.sort((a,b)=>({critical:0,high:1,medium:2,low:3}[a.severity]||2)-({critical:0,high:1,medium:2,low:3}[b.severity]||2));
+  document.getElementById('disps-tbody').innerHTML=list.length?list.map(d=>{
     const sv=SEV[d.severity]||SEV.medium;
-    return`<tr><td><span style="cursor:pointer;color:var(--blue);font-weight:600" onclick="showDispDetail('${d.id}')">${esc(d.title)}</span></td>
-    <td>${esc(supName(d.supplierId))}</td><td>${d.collaborationId?esc(colName(d.collaborationId)):'–'}</td>
-    <td><span class="badge ${sv.c}">${sv.l}</span></td>
-    <td><span class="badge ${DST_CLS[d.status]||'bm'}">${DST[d.status]||d.status}</span></td>
-    <td>${fmtD(d.createdAt)}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick="showDispDetail('${d.id}')">Åbn →</button></td></tr>`;
+    return`<tr>
+      <td><span style="cursor:pointer;color:var(--blue);font-weight:600" onclick="showDispDetail('${d.id}')">${esc(d.title)}</span></td>
+      <td>${esc(supName(d.supplierId))}</td><td>${d.contractId?esc(ctrName(d.contractId)):'–'}</td>
+      <td><span class="badge ${sv.cls}">${sv.l}</span></td>
+      <td><span class="badge ${DST_CLS[d.status]||'b-gray'}">${DST[d.status]||d.status}</span></td>
+      <td>${fmtD(d.createdAt)}</td>
+      <td><button class="btn btn-ghost btn-xs" onclick="showDispDetail('${d.id}')">Åbn →</button></td>
+    </tr>`;
   }).join(''):'<tr><td colspan="7" class="empty-row">Ingen disputes</td></tr>';
 }
 
 function showDispDetail(id){
-  const d=state.disputes.find(d=>d.id===id); if(!d) return;
-  const sv=SEV[d.severity]||SEV.medium;
-  const tl=(d.timeline||[]);
+  const d=state.disputes.find(d=>d.id===id);if(!d)return;
+  const sv=SEV[d.severity]||SEV.medium;const tl=d.timeline||[];
   document.getElementById('disp-detail-content').innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
-      <div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-          <div style="font-size:18px;font-weight:700">${esc(d.title)}</div>
-          <span class="badge ${sv.c}">${sv.l}</span>
-          <span class="badge ${DST_CLS[d.status]||'bm'}">${DST[d.status]||d.status}</span>
+    <div class="detail-hero">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:17px;font-weight:700">${esc(d.title)}</span>
+            <span class="badge ${sv.cls}">${sv.l}</span>
+            <span class="badge ${DST_CLS[d.status]||'b-gray'}">${DST[d.status]||d.status}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted)">${esc(supName(d.supplierId))}${d.contractId?' · '+esc(ctrName(d.contractId)):''} · ${SCOPE_L[d.scope]||'–'}</div>
         </div>
-        <div style="font-size:12px;color:var(--muted)">${esc(supName(d.supplierId))}${d.collaborationId?' · '+esc(colName(d.collaborationId)):''} · ${SCOPE_L[d.scope]||'–'}</div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-primary btn-sm" onclick="openDNote('${id}')">+ Sagsnotat</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditDisp('${id}')">Rediger</button>
+        </div>
       </div>
-      <div style="display:flex;gap:7px">
-        <button class="btn btn-primary btn-sm" onclick="openDNote('${id}')">+ Sagsnotat</button>
-        <button class="btn btn-ghost btn-sm" onclick="openEditDisp('${id}')">Rediger</button>
-      </div>
+      ${d.description?`<div style="margin-top:12px;padding:10px 12px;background:var(--bg);border-radius:7px;font-size:13px;color:var(--muted)">${esc(d.description)}</div>`:''}
     </div>
-    <div class="two-col" style="margin-bottom:14px">
-      <div class="card">
-        <table style="font-size:12.5px"><tbody>
-          <tr><td style="color:var(--muted);padding:4px 0">Leverandør</td><td style="padding:4px 0 4px 12px">${esc(supName(d.supplierId))}</td></tr>
-          <tr><td style="color:var(--muted);padding:4px 0">Samarbejde</td><td style="padding:4px 0 4px 12px">${d.collaborationId?esc(colName(d.collaborationId)):'–'}</td></tr>
-          <tr><td style="color:var(--muted);padding:4px 0">Omhandler</td><td style="padding:4px 0 4px 12px">${SCOPE_L[d.scope]||'–'}</td></tr>
-          <tr><td style="color:var(--muted);padding:4px 0">Oprettet</td><td style="padding:4px 0 4px 12px">${fmtD(d.createdAt)}</td></tr>
-        </tbody></table>
-      </div>
-      <div class="card"><div style="font-size:12.5px;color:var(--muted);line-height:1.6">${esc(d.description||'Ingen beskrivelse')}</div></div>
-    </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:13px;font-weight:600">Sagsforløb</div>
+    <div class="card card-pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:600">Sagsforløb</div>
         <button class="btn btn-ghost btn-sm" onclick="openDNote('${id}')">+ Tilføj note</button>
       </div>
-      ${tl.length?[...tl].reverse().map(t=>`<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--bd);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px">💬</div>
-        <div style="flex:1"><div style="font-size:10px;color:var(--muted);margin-bottom:2px">${fmtD(t.date)}</div>
-        <div style="font-size:12.5px">${esc(t.note)}</div>
-        ${t.statusChange?`<span class="badge bb" style="margin-top:4px">→ ${DST[t.statusChange]||t.statusChange}</span>`:''}
-        </div></div>`).join(''):'<div style="color:var(--muted);font-size:13px">Ingen noter endnu</div>'}
+      ${tl.length?[...tl].reverse().map(n=>`<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">💬</div>
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">${fmtD(n.date)}</div>
+        <div style="font-size:13px">${esc(n.note)}</div>
+        ${n.statusChange?`<span class="badge b-blue" style="margin-top:4px">→ ${DST[n.statusChange]||n.statusChange}</span>`:''}</div>
+      </div>`).join(''):'<div style="color:var(--muted);font-size:13px">Ingen noter endnu</div>'}
     </div>`;
-  showPage('dispute-detail');
+  nav('dispute-detail',true);
 }
 
-// ═══════════════════════════════════════════════════════
-// INDSTILLINGER
-// ═══════════════════════════════════════════════════════
-function renderIndstillinger(){
-  const fields=document.getElementById('template-url-fields');
-  fields.innerHTML=Object.entries(TMPL).map(([k,t])=>`
-    <div class="fg">
-      <label class="fl">${t.name}</label>
-      <input class="fi" id="turl-${k}" placeholder="https://onedrive.live.com/..." value="${esc(state.templateUrls&&state.templateUrls[k]||'')}">
-    </div>`).join('');
+// ── INDSTILLINGER ──
+function renderIndst(){
+  document.getElementById('tmpl-fields').innerHTML=Object.entries(TMPL).map(([k,t])=>`
+    <div class="fg"><label class="fl">${t.name}</label>
+    <input class="fi" id="turl-${k}" placeholder="https://onedrive.live.com/..." value="${esc((state.templateUrls||{})[k]||'')}"></div>`).join('');
 }
-function saveTemplateUrls(){
-  if(!state.templateUrls) state.templateUrls={};
-  Object.keys(TMPL).forEach(k=>{
-    const el=document.getElementById('turl-'+k);
-    if(el) state.templateUrls[k]=el.value.trim();
-  }); sv(); alert('Links gemt!');
-}
+function saveTmplUrls(){if(!state.templateUrls)state.templateUrls={};Object.keys(TMPL).forEach(k=>{const el=document.getElementById('turl-'+k);if(el)state.templateUrls[k]=el.value.trim();});sv();alert('Links gemt!');}
 
-// ═══════════════════════════════════════════════════════
-// MODALS
-// ═══════════════════════════════════════════════════════
-function openOv(n){ document.getElementById('ov-'+n).classList.add('open'); }
-function closeOv(n){ document.getElementById('ov-'+n).classList.remove('open'); }
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
-
-function fillSupSel(elId, selId){
-  const el=document.getElementById(elId);
-  el.innerHTML='<option value="">– Vælg leverandør –</option>'+state.suppliers.map(s=>`<option value="${s.id}"${s.id===selId?' selected':''}>${esc(s.name)}</option>`).join('');
-  if(selId) el.value=selId;
+// ── SUPPLIER LINK ──
+let _curLinkCid=null;
+function buildSupLink(cid){
+  const c=state.contracts.find(c=>c.id===cid);if(!c)return'';
+  const sup=state.suppliers.find(s=>s.id===c.supplierId)||{};
+  const task=state.tasks.find(t=>t.id===c.taskId)||{};
+  const proj=state.projects.find(p=>p.id===(task.projectId||c.projectId))||{};
+  const si=stageInfo(c.stage);
+  const stageIdx=CTR_STAGES.findIndex(s=>s.key===c.stage);
+  const docs=(c.documents||[]).map(d=>({name:d.name,status:d.status,signedUrl:d.signedUrl||'',templateUrl:(state.templateUrls||{})[d.templateKey]||'',file:d.templateKey&&TMPL[d.templateKey]?TMPL[d.templateKey].file:''}));
+  const data={num:c.num,name:c.name,project:proj.name||'',task:task.name||'',supplierName:sup.name||'',amount:c.amount||0,stage:si.label,stageIdx,deadline:c.deadline||'',terms:c.terms||'',docs,generatedAt:new Date().toISOString().split('T')[0]};
+  try{return window.location.origin+window.location.pathname+'#supplier/'+btoa(unescape(encodeURIComponent(JSON.stringify(data))));}catch(e){return'';}
 }
-
-function openNewCollab(supplierId){
-  fillSupSel('mc-sup', supplierId);
-  document.getElementById('mc-title').textContent='Nyt samarbejde';
-  document.getElementById('mc-id').value='';
-  ['mc-name','mc-proj','mc-desc','mc-terms'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('mc-amount').value='';
-  document.getElementById('mc-stage').value='contact';
-  document.getElementById('mc-start').value=new Date().toISOString().split('T')[0];
-  document.getElementById('mc-dead').value='';
-  openOv('collab');
-}
-function openEditCollab(id){
-  const c=state.collaborations.find(c=>c.id===id); if(!c) return;
-  fillSupSel('mc-sup',c.supplierId);
-  document.getElementById('mc-title').textContent='Rediger samarbejde';
-  document.getElementById('mc-id').value=id;
-  document.getElementById('mc-name').value=c.name||'';
-  document.getElementById('mc-sup').value=c.supplierId||'';
-  document.getElementById('mc-stage').value=c.stage||'contact';
-  document.getElementById('mc-proj').value=c.project||'';
-  document.getElementById('mc-amount').value=c.amount||'';
-  document.getElementById('mc-start').value=c.startDate||'';
-  document.getElementById('mc-dead').value=c.deadline||'';
-  document.getElementById('mc-desc').value=c.description||'';
-  document.getElementById('mc-terms').value=c.terms||'';
-  openOv('collab');
-}
-function deleteCollab(id){
-  if(!confirm('Slet dette samarbejde?')) return;
-  state.collaborations=state.collaborations.filter(c=>c.id!==id);
-  state.disputes=state.disputes.filter(d=>d.collaborationId!==id);
-  sv(); showPage('samarbejder');
-}
-function saveCollab(){
-  const id=document.getElementById('mc-id').value;
-  const name=document.getElementById('mc-name').value.trim();
-  const sup=document.getElementById('mc-sup').value;
-  if(!name||!sup){ alert('Navn og leverandør er påkrævet'); return; }
-  const data={ id:id||genId(), num:id?state.collaborations.find(c=>c.id===id)?.num||nextNum():nextNum(),
-    name, supplierId:sup, stage:document.getElementById('mc-stage').value,
-    project:document.getElementById('mc-proj').value.trim(),
-    amount:parseFloat(document.getElementById('mc-amount').value)||0,
-    startDate:document.getElementById('mc-start').value,
-    deadline:document.getElementById('mc-dead').value,
-    description:document.getElementById('mc-desc').value.trim(),
-    terms:document.getElementById('mc-terms').value.trim(),
-    documents:id?state.collaborations.find(c=>c.id===id)?.documents||[]:[],
-    stageDates:id?state.collaborations.find(c=>c.id===id)?.stageDates||{}:{},
-    linkSentAt:id?state.collaborations.find(c=>c.id===id)?.linkSentAt||null:null,
-    createdAt:id?state.collaborations.find(c=>c.id===id)?.createdAt:new Date().toISOString().split('T')[0]
-  };
-  if(id){ const i=state.collaborations.findIndex(c=>c.id===id); if(i>=0) state.collaborations[i]=data; }
-  else state.collaborations.push(data);
-  sv(); closeOv('collab'); renderSamarbejder();
+function openSupLink(cid){_curLinkCid=cid;document.getElementById('suplink-url').textContent=buildSupLink(cid);openOv('suplink');}
+function copySupLink(){navigator.clipboard?.writeText(document.getElementById('suplink-url').textContent).then(()=>alert('Kopieret!'));}
+function previewSupLink(){window.open(document.getElementById('suplink-url').textContent,'_blank');}
+function markCtrSent(){
+  if(!_curLinkCid)return;
+  const c=state.contracts.find(c=>c.id===_curLinkCid);
+  if(c){c.linkSentAt=new Date().toISOString().split('T')[0];if(c.stage==='draft'||c.stage==='accepted')c.stage='sent';sv();}
+  closeOv('suplink');showContractDetail(_curLinkCid,_ctrBack);
 }
 
-function openNewSup(){ document.getElementById('ms-title').textContent='Tilføj leverandør'; document.getElementById('ms-id').value=''; ['ms-name','ms-country','ms-cvr','ms-cname','ms-email','ms-phone','ms-notes'].forEach(i=>document.getElementById(i).value=''); document.getElementById('ms-cat').value='produktion'; document.getElementById('ms-status').value='active'; openOv('sup'); }
-function openEditSup(id){ const s=state.suppliers.find(s=>s.id===id); if(!s) return; document.getElementById('ms-title').textContent='Rediger leverandør'; document.getElementById('ms-id').value=id; document.getElementById('ms-name').value=s.name||''; document.getElementById('ms-country').value=s.country||''; document.getElementById('ms-cvr').value=s.cvr||''; document.getElementById('ms-cat').value=s.cat||'produktion'; document.getElementById('ms-cname').value=s.cname||''; document.getElementById('ms-email').value=s.email||''; document.getElementById('ms-phone').value=s.phone||''; document.getElementById('ms-status').value=s.status||'active'; document.getElementById('ms-notes').value=s.notes||''; openOv('sup'); }
-function deleteSup(id){ if(!confirm('Slet leverandør og al tilknyttet data?')) return; state.suppliers=state.suppliers.filter(s=>s.id!==id); state.collaborations=state.collaborations.filter(c=>c.supplierId!==id); state.disputes=state.disputes.filter(d=>d.supplierId!==id); sv(); showPage('leverandoerer'); }
-function saveSup(){ const id=document.getElementById('ms-id').value; const name=document.getElementById('ms-name').value.trim(); if(!name){ alert('Navn påkrævet'); return; } const data={id:id||genId(),name,country:document.getElementById('ms-country').value.trim(),cvr:document.getElementById('ms-cvr').value.trim(),cat:document.getElementById('ms-cat').value,cname:document.getElementById('ms-cname').value.trim(),email:document.getElementById('ms-email').value.trim(),phone:document.getElementById('ms-phone').value.trim(),status:document.getElementById('ms-status').value,notes:document.getElementById('ms-notes').value.trim()}; if(id){const i=state.suppliers.findIndex(s=>s.id===id);if(i>=0)state.suppliers[i]=data;}else state.suppliers.push(data); sv(); closeOv('sup'); renderSups(); }
+// ── SUPPLIER PUBLIC VIEW ──
+function renderSupplierView(data){
+  document.getElementById('admin-app').style.display='none';
+  document.getElementById('supplier-view').style.display='block';
+  document.title='Kontrakt – NemInventar ApS';
+  const stages=CTR_STAGES.map(s=>s.label);
+  const ci=data.stageIdx||0;
+  const stpHtml=stages.map((s,i)=>{
+    const bg=i<ci?'#16a34a':i===ci?'#2563eb':'#e2e8f0';
+    const fc=i<=ci?'#fff':'#94a3b8';
+    return`<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:52px">
+      <div style="width:24px;height:24px;border-radius:50%;background:${bg};color:${fc};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${i<ci?'✓':i+1}</div>
+      <div style="font-size:9px;margin-top:4px;text-align:center;color:${i===ci?'#2563eb':'#94a3b8'};font-weight:${i===ci?700:400};line-height:1.3">${s}</div>
+    </div>${i<stages.length-1?`<div style="flex:1;height:2px;background:${i<ci?'#16a34a':'#e2e8f0'};margin-top:11px;min-width:3px"></div>`:''}`
+  }).join('');
+  const docsHtml=(data.docs||[]).map(d=>{const url=d.signedUrl||d.templateUrl||'';
+    return url?`<a href="${esc(url)}" target="_blank" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;margin-bottom:8px;text-decoration:none;color:#0f172a" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#e2e8f0'">
+      <span style="font-size:20px">📄</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(d.name)}</div><div style="font-size:11px;color:#64748b">${esc(d.file||'Dokument')}</div></div>
+      <span style="color:#2563eb">⬇</span>
+    </a>`:''}).join('');
+  document.getElementById('supplier-view').innerHTML=`<div style="background:#f1f5f9;min-height:100vh;padding:32px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif">
+    <div style="max-width:660px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);overflow:hidden">
+      <div style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;padding:28px 32px">
+        <div style="font-size:20px;font-weight:800;margin-bottom:3px">🤝 NemInventar ApS</div>
+        <div style="font-size:13px;opacity:.8">Kontrakt sendt til dig</div>
+      </div>
+      <div style="padding:28px 32px">
+        <div style="overflow-x:auto;margin-bottom:28px"><div style="display:flex;align-items:flex-start;min-width:600px">${stpHtml}</div></div>
+        <div style="margin-bottom:20px">
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Kontraktoplysninger</div>
+          ${[['Kontraktnummer',data.num],['Navn',data.name],['Projekt',data.project],['Opgave',data.task],['Status',data.stage],['Beløb',data.amount?Number(data.amount).toLocaleString('da-DK')+' kr.':''],['Deadline',data.deadline?new Date(data.deadline+'T12:00').toLocaleDateString('da-DK'):'']].filter(r=>r[1]).map(r=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px"><span style="color:#64748b">${r[0]}</span><span style="font-weight:600">${esc(String(r[1]))}</span></div>`).join('')}
+        </div>
+        ${data.terms?`<div style="margin-bottom:20px"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Aftalevilkår</div><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:13px;color:#475569;line-height:1.7;white-space:pre-wrap">${esc(data.terms)}</div></div>`:''}
+        ${docsHtml?`<div style="margin-bottom:20px"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Dokumenter</div>${docsHtml}</div>`:''}
+        <div><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Kontakt</div><div style="font-size:13px;color:#475569">Spørgsmål? <a href="mailto:kontakt@neminventar.dk" style="color:#2563eb;font-weight:600">kontakt@neminventar.dk</a></div></div>
+      </div>
+      <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 32px;font-size:11px;color:#94a3b8;text-align:center">NemInventar ApS · ${esc(data.generatedAt||'')} · Personligt link</div>
+    </div>
+  </div>`;
+}
 
-function openNewDispute(supId, colId){ fillSupSel('md-sup',supId); updDisputeCollabs(); if(colId) setTimeout(()=>document.getElementById('md-col').value=colId,50); document.getElementById('md-title').textContent='Registrer dispute'; document.getElementById('md-id').value=''; document.getElementById('md-titl').value=''; document.getElementById('md-desc').value=''; document.getElementById('md-sev').value='medium'; document.getElementById('md-stat').value='open'; document.getElementById('md-scope').value='delivery'; document.getElementById('md-date').value=new Date().toISOString().split('T')[0]; openOv('disp'); }
-function openEditDisp(id){ const d=state.disputes.find(d=>d.id===id); if(!d) return; fillSupSel('md-sup',d.supplierId); updDisputeCollabs(); document.getElementById('md-title').textContent='Rediger dispute'; document.getElementById('md-id').value=id; document.getElementById('md-titl').value=d.title||''; document.getElementById('md-sev').value=d.severity||'medium'; document.getElementById('md-stat').value=d.status||'open'; document.getElementById('md-scope').value=d.scope||'delivery'; document.getElementById('md-desc').value=d.description||''; document.getElementById('md-date').value=d.createdAt||''; setTimeout(()=>document.getElementById('md-col').value=d.collaborationId||'',50); openOv('disp'); }
-function updDisputeCollabs(){ const sid=document.getElementById('md-sup').value; const cols=state.collaborations.filter(c=>c.supplierId===sid); document.getElementById('md-col').innerHTML='<option value="">– Hele leverandørforholdet –</option>'+cols.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join(''); }
-function saveDisp(){ const id=document.getElementById('md-id').value; const title=document.getElementById('md-titl').value.trim(); const sup=document.getElementById('md-sup').value; if(!title||!sup){alert('Titel og leverandør påkrævet');return;} const ex=id?state.disputes.find(d=>d.id===id):null; const ns=document.getElementById('md-stat').value; const data={id:id||genId(),title,supplierId:sup,collaborationId:document.getElementById('md-col').value||null,severity:document.getElementById('md-sev').value,status:ns,scope:document.getElementById('md-scope').value,description:document.getElementById('md-desc').value.trim(),createdAt:document.getElementById('md-date').value||new Date().toISOString().split('T')[0],timeline:ex?ex.timeline:[],resolvedAt:(ns==='resolved'&&(!ex||ex.status!=='resolved'))?new Date().toISOString().split('T')[0]:(ex?ex.resolvedAt:null)}; if(id){const i=state.disputes.findIndex(d=>d.id===id);if(i>=0)state.disputes[i]=data;}else state.disputes.push(data); sv(); closeOv('disp'); updateBadge(); renderDisps(); }
+// ── MODALS ──
+function openOv(n){document.getElementById('ov-'+n).classList.add('open');}
+function closeOv(n){document.getElementById('ov-'+n).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+function fillSupSel(el,selId){el.innerHTML='<option value="">– Vælg leverandør –</option>'+state.suppliers.map(s=>`<option value="${s.id}"${s.id===selId?' selected':''}>${esc(s.name)}</option>`).join('');if(selId)el.value=selId;}
 
-function openDNote(id){ document.getElementById('dn-id').value=id; document.getElementById('dn-text').value=''; document.getElementById('dn-stat').value=''; openOv('dnote'); }
-function saveDNote(){ const id=document.getElementById('dn-id').value; const text=document.getElementById('dn-text').value.trim(); if(!text){alert('Note påkrævet');return;} const d=state.disputes.find(d=>d.id===id); if(!d) return; if(!d.timeline) d.timeline=[]; const ns=document.getElementById('dn-stat').value; const note={date:new Date().toISOString().split('T')[0],note:text}; if(ns){note.statusChange=ns;d.status=ns;} if(ns==='resolved'&&!d.resolvedAt) d.resolvedAt=note.date; d.timeline.push(note); sv(); closeOv('dnote'); updateBadge(); showDispDetail(id); }
+function openNewProj(){['mp-id','mp-name','mp-client','mp-budget','mp-dead','mp-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('mp-title').textContent='Nyt projekt';document.getElementById('mp-status').value='active';openOv('proj');}
+function openEditProj(id){const p=state.projects.find(p=>p.id===id);if(!p)return;document.getElementById('mp-title').textContent='Rediger projekt';document.getElementById('mp-id').value=id;document.getElementById('mp-name').value=p.name||'';document.getElementById('mp-client').value=p.client||'';document.getElementById('mp-status').value=p.status||'active';document.getElementById('mp-budget').value=p.budget||'';document.getElementById('mp-dead').value=p.deadline||'';document.getElementById('mp-desc').value=p.description||'';openOv('proj');}
+function deleteProj(id){if(!confirm('Slet projekt og al tilknyttet data?'))return;const tasks=state.tasks.filter(t=>t.projectId===id);state.tasks=state.tasks.filter(t=>t.projectId!==id);state.bids=state.bids.filter(b=>!tasks.some(t=>t.id===b.taskId));state.contracts=state.contracts.filter(c=>c.projectId!==id);state.projects=state.projects.filter(p=>p.id!==id);sv();nav('projekter');}
+function saveProj(){const id=document.getElementById('mp-id').value;const name=document.getElementById('mp-name').value.trim();if(!name){alert('Projektnavn påkrævet');return;}const ex=id?state.projects.find(p=>p.id===id):null;const data={id:id||genId(),num:ex?ex.num:nextProjNum(),name,client:document.getElementById('mp-client').value.trim(),status:document.getElementById('mp-status').value,budget:parseFloat(document.getElementById('mp-budget').value)||0,deadline:document.getElementById('mp-dead').value,description:document.getElementById('mp-desc').value.trim(),createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.projects.findIndex(p=>p.id===id);if(i>=0)state.projects[i]=data;}else state.projects.push(data);sv();closeOv('proj');renderProj();}
 
-function openNewDoc(cid){ document.getElementById('ddoc-cid').value=cid; document.getElementById('ddoc-id').value=''; document.getElementById('ddoc-tmpl').value=''; document.getElementById('ddoc-name').value=''; document.getElementById('ddoc-status').value='template'; document.getElementById('ddoc-url').value=''; document.getElementById('ddoc-sdate').value=''; openOv('doc'); }
-function openEditDoc(cid,did){ const c=state.collaborations.find(c=>c.id===cid); if(!c) return; const d=(c.documents||[]).find(d=>d.id===did); if(!d) return; document.getElementById('ddoc-cid').value=cid; document.getElementById('ddoc-id').value=did; document.getElementById('ddoc-tmpl').value=d.templateKey||''; document.getElementById('ddoc-name').value=d.name||''; document.getElementById('ddoc-status').value=d.status||'template'; document.getElementById('ddoc-url').value=d.signedUrl||''; document.getElementById('ddoc-sdate').value=d.signedDate||''; openOv('doc'); }
-function onDocTmplChange(){ const k=document.getElementById('ddoc-tmpl').value; if(k&&TMPL[k]) document.getElementById('ddoc-name').value=TMPL[k].name; }
-function deleteDoc(cid,did){ const c=state.collaborations.find(c=>c.id===cid); if(!c) return; c.documents=(c.documents||[]).filter(d=>d.id!==did); sv(); showCollabDetail(cid); }
-function saveDoc(){ const cid=document.getElementById('ddoc-cid').value; const did=document.getElementById('ddoc-id').value; const name=document.getElementById('ddoc-name').value.trim(); if(!name){alert('Dokumentnavn påkrævet');return;} const c=state.collaborations.find(c=>c.id===cid); if(!c) return; if(!c.documents) c.documents=[]; const data={id:did||genId(),templateKey:document.getElementById('ddoc-tmpl').value||null,name,status:document.getElementById('ddoc-status').value,signedUrl:document.getElementById('ddoc-url').value.trim(),signedDate:document.getElementById('ddoc-sdate').value}; if(did){const i=c.documents.findIndex(d=>d.id===did);if(i>=0)c.documents[i]=data;}else c.documents.push(data); sv(); closeOv('doc'); showCollabDetail(cid); }
+function openNewTask(pid){['mt-id','mt-name','mt-desc','mt-unit','mt-est','mt-qty'].forEach(id=>document.getElementById(id).value='');document.getElementById('mt-title').textContent='Tilføj opgave';document.getElementById('mt-projid').value=pid;openOv('task');}
+function openEditTask(id){const t=state.tasks.find(t=>t.id===id);if(!t)return;document.getElementById('mt-title').textContent='Rediger opgave';document.getElementById('mt-id').value=id;document.getElementById('mt-projid').value=t.projectId;document.getElementById('mt-name').value=t.name||'';document.getElementById('mt-desc').value=t.description||'';document.getElementById('mt-est').value=t.estimatedAmount||'';document.getElementById('mt-unit').value=t.unit||'';document.getElementById('mt-qty').value=t.qty||'';openOv('task');}
+function deleteTask(id){if(!confirm('Slet opgave?'))return;const t=state.tasks.find(t=>t.id===id);state.tasks=state.tasks.filter(t=>t.id!==id);state.bids=state.bids.filter(b=>b.taskId!==id);state.contracts=state.contracts.filter(c=>c.taskId!==id);sv();if(t)showProjDetail(t.projectId);else nav('projekter');}
+function saveTask(){const id=document.getElementById('mt-id').value;const pid=document.getElementById('mt-projid').value;const name=document.getElementById('mt-name').value.trim();if(!name){alert('Opgavenavn påkrævet');return;}const ex=id?state.tasks.find(t=>t.id===id):null;const data={id:id||genId(),num:ex?ex.num:nextTaskNum(pid),projectId:pid,name,description:document.getElementById('mt-desc').value.trim(),estimatedAmount:parseFloat(document.getElementById('mt-est').value)||0,unit:document.getElementById('mt-unit').value.trim(),qty:document.getElementById('mt-qty').value.trim(),createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.tasks.findIndex(t=>t.id===id);if(i>=0)state.tasks[i]=data;}else state.tasks.push(data);sv();closeOv('task');showProjDetail(pid);}
 
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
-(function init(){
-  const hash = window.location.hash;
+function openNewBid(tid){fillSupSel(document.getElementById('mb-sup'),null);['mb-id','mb-amount','mb-note'].forEach(id=>document.getElementById(id).value='');document.getElementById('mb-taskid').value=tid;document.getElementById('mb-date').value=new Date().toISOString().split('T')[0];openOv('bid');}
+function saveBid(){const id=document.getElementById('mb-id').value;const tid=document.getElementById('mb-taskid').value;const sup=document.getElementById('mb-sup').value;const amt=parseFloat(document.getElementById('mb-amount').value);if(!sup||isNaN(amt)){alert('Leverandør og beløb påkrævet');return;}const data={id:id||genId(),taskId:tid,supplierId:sup,amount:amt,note:document.getElementById('mb-note').value.trim(),submittedAt:document.getElementById('mb-date').value,status:'pending'};if(id){const i=state.bids.findIndex(b=>b.id===id);if(i>=0)state.bids[i]=data;}else state.bids.push(data);sv();closeOv('bid');showTaskDetail(tid,_taskProjId);}
+
+function openNewCtrFromBid(tid,bidId){const t=state.tasks.find(t=>t.id===tid)||{};const b=state.bids.find(b=>b.id===bidId)||{};const proj=state.projects.find(p=>p.id===t.projectId)||{};document.getElementById('mc-title').textContent='Opret kontrakt';document.getElementById('mc-id').value='';document.getElementById('mc-taskid').value=tid;document.getElementById('mc-bidid').value=bidId||'';document.getElementById('mc-name').value=(proj.name?proj.name+' – ':'')+t.name||'Ny kontrakt';document.getElementById('mc-stage').value='accepted';document.getElementById('mc-amount').value=b.amount||'';document.getElementById('mc-dead').value='';document.getElementById('mc-terms').value='';openOv('ctr');}
+function openEditCtr(id){const c=state.contracts.find(c=>c.id===id);if(!c)return;document.getElementById('mc-title').textContent='Rediger kontrakt';document.getElementById('mc-id').value=id;document.getElementById('mc-taskid').value=c.taskId||'';document.getElementById('mc-bidid').value=c.bidId||'';document.getElementById('mc-name').value=c.name||'';document.getElementById('mc-stage').value=c.stage||'draft';document.getElementById('mc-amount').value=c.amount||'';document.getElementById('mc-dead').value=c.deadline||'';document.getElementById('mc-terms').value=c.terms||'';openOv('ctr');}
+function delCtr(id){if(!confirm('Slet kontrakt?'))return;state.contracts=state.contracts.filter(c=>c.id!==id);sv();nav('kontrakter');}
+function saveCtr(){const id=document.getElementById('mc-id').value;const name=document.getElementById('mc-name').value.trim();if(!name){alert('Kontraktnavn påkrævet');return;}const tid=document.getElementById('mc-taskid').value;const bidId=document.getElementById('mc-bidid').value;const task=state.tasks.find(t=>t.id===tid);const bid=state.bids.find(b=>b.id===bidId);const ex=id?state.contracts.find(c=>c.id===id):null;const supId=bid?bid.supplierId:(ex?ex.supplierId:'');const projId=task?task.projectId:(ex?ex.projectId:'');const data={id:id||genId(),num:ex?ex.num:nextCtrNum(),name,taskId:tid||null,bidId:bidId||null,supplierId:supId,projectId:projId,stage:document.getElementById('mc-stage').value,amount:parseFloat(document.getElementById('mc-amount').value)||0,deadline:document.getElementById('mc-dead').value,terms:document.getElementById('mc-terms').value.trim(),documents:ex?ex.documents||[]:[],stageDates:ex?ex.stageDates||{}:{},linkSentAt:ex?ex.linkSentAt||null:null,createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.contracts.findIndex(c=>c.id===id);if(i>=0)state.contracts[i]=data;}else state.contracts.push(data);sv();closeOv('ctr');if(tid)showTaskDetail(tid,_taskProjId);else showContractDetail(data.id,_ctrBack);}
+
+function openNewDoc(cid){document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value='';['dd-name','dd-url','dd-sdate'].forEach(id=>document.getElementById(id).value='');document.getElementById('dd-tmpl').value='';document.getElementById('dd-status').value='template';openOv('doc');}
+function openEditDoc(cid,did){const c=state.contracts.find(c=>c.id===cid);if(!c)return;const d=(c.documents||[]).find(d=>d.id===did);if(!d)return;document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value=did;document.getElementById('dd-tmpl').value=d.templateKey||'';document.getElementById('dd-name').value=d.name||'';document.getElementById('dd-status').value=d.status||'template';document.getElementById('dd-url').value=d.signedUrl||'';document.getElementById('dd-sdate').value=d.signedDate||'';openOv('doc');}
+function onDocTmpl(){const k=document.getElementById('dd-tmpl').value;if(k&&TMPL[k])document.getElementById('dd-name').value=TMPL[k].name;}
+function delDoc(cid,did){const c=state.contracts.find(c=>c.id===cid);if(!c)return;c.documents=(c.documents||[]).filter(d=>d.id!==did);sv();showContractDetail(cid,_ctrBack);}
+function saveDoc(){const cid=document.getElementById('dd-cid').value;const did=document.getElementById('dd-did').value;const name=document.getElementById('dd-name').value.trim();if(!name){alert('Dokumentnavn påkrævet');return;}const c=state.contracts.find(c=>c.id===cid);if(!c)return;if(!c.documents)c.documents=[];const data={id:did||genId(),templateKey:document.getElementById('dd-tmpl').value||null,name,status:document.getElementById('dd-status').value,signedUrl:document.getElementById('dd-url').value.trim(),signedDate:document.getElementById('dd-sdate').value};if(did){const i=c.documents.findIndex(d=>d.id===did);if(i>=0)c.documents[i]=data;}else c.documents.push(data);sv();closeOv('doc');showContractDetail(cid,_ctrBack);}
+
+function openNewSup(){['ms-id','ms-name','ms-country','ms-cvr','ms-cname','ms-email','ms-phone','ms-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('ms-title').textContent='Tilføj leverandør';document.getElementById('ms-cat').value='produktion';openOv('sup');}
+function openEditSup(id){const s=state.suppliers.find(s=>s.id===id);if(!s)return;document.getElementById('ms-title').textContent='Rediger leverandør';document.getElementById('ms-id').value=id;document.getElementById('ms-name').value=s.name||'';document.getElementById('ms-country').value=s.country||'';document.getElementById('ms-cvr').value=s.cvr||'';document.getElementById('ms-cat').value=s.cat||'produktion';document.getElementById('ms-cname').value=s.cname||'';document.getElementById('ms-email').value=s.email||'';document.getElementById('ms-phone').value=s.phone||'';document.getElementById('ms-notes').value=s.notes||'';openOv('sup');}
+function deleteSup(id){state.suppliers=state.suppliers.filter(s=>s.id!==id);state.contracts=state.contracts.filter(c=>c.supplierId!==id);state.disputes=state.disputes.filter(d=>d.supplierId!==id);sv();renderSups();}
+function saveSup(){const id=document.getElementById('ms-id').value;const name=document.getElementById('ms-name').value.trim();if(!name){alert('Navn påkrævet');return;}const data={id:id||genId(),name,country:document.getElementById('ms-country').value.trim(),cvr:document.getElementById('ms-cvr').value.trim(),cat:document.getElementById('ms-cat').value,cname:document.getElementById('ms-cname').value.trim(),email:document.getElementById('ms-email').value.trim(),phone:document.getElementById('ms-phone').value.trim(),notes:document.getElementById('ms-notes').value.trim()};if(id){const i=state.suppliers.findIndex(s=>s.id===id);if(i>=0)state.suppliers[i]=data;}else state.suppliers.push(data);sv();closeOv('sup');renderSups();}
+
+function openNewDisp(supId,ctrId){fillSupSel(document.getElementById('md-sup'),supId||null);updDispCols();if(ctrId)setTimeout(()=>document.getElementById('md-ctr').value=ctrId,60);document.getElementById('md-title').textContent='Registrer dispute';['md-id','md-titl','md-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('md-sev').value='medium';document.getElementById('md-date').value=new Date().toISOString().split('T')[0];document.getElementById('md-scope').value='delivery';openOv('disp');}
+function openEditDisp(id){const d=state.disputes.find(d=>d.id===id);if(!d)return;fillSupSel(document.getElementById('md-sup'),d.supplierId);updDispCols();document.getElementById('md-title').textContent='Rediger dispute';document.getElementById('md-id').value=id;document.getElementById('md-titl').value=d.title||'';document.getElementById('md-sev').value=d.severity||'medium';document.getElementById('md-date').value=d.createdAt||'';document.getElementById('md-scope').value=d.scope||'delivery';document.getElementById('md-desc').value=d.description||'';setTimeout(()=>document.getElementById('md-ctr').value=d.contractId||'',60);openOv('disp');}
+function updDispCols(){const sid=document.getElementById('md-sup').value;const ctrs=state.contracts.filter(c=>c.supplierId===sid);document.getElementById('md-ctr').innerHTML='<option value="">– Generel –</option>'+ctrs.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');}
+function saveDisp(){const id=document.getElementById('md-id').value;const title=document.getElementById('md-titl').value.trim();const sup=document.getElementById('md-sup').value;if(!title||!sup){alert('Titel og leverandør påkrævet');return;}const ex=id?state.disputes.find(d=>d.id===id):null;const data={id:id||genId(),title,supplierId:sup,contractId:document.getElementById('md-ctr').value||null,severity:document.getElementById('md-sev').value,status:ex?ex.status:'open',scope:document.getElementById('md-scope').value,description:document.getElementById('md-desc').value.trim(),createdAt:document.getElementById('md-date').value||new Date().toISOString().split('T')[0],timeline:ex?ex.timeline:[]};if(id){const i=state.disputes.findIndex(d=>d.id===id);if(i>=0)state.disputes[i]=data;}else state.disputes.push(data);sv();closeOv('disp');updateBadge();renderDisps();}
+function openDNote(id){document.getElementById('dn-id').value=id;document.getElementById('dn-text').value='';document.getElementById('dn-stat').value='';openOv('dnote');}
+function saveDNote(){const id=document.getElementById('dn-id').value;const text=document.getElementById('dn-text').value.trim();if(!text){alert('Note påkrævet');return;}const d=state.disputes.find(d=>d.id===id);if(!d)return;if(!d.timeline)d.timeline=[];const ns=document.getElementById('dn-stat').value;const note={date:new Date().toISOString().split('T')[0],note:text};if(ns){note.statusChange=ns;d.status=ns;}d.timeline.push(note);sv();closeOv('dnote');updateBadge();showDispDetail(id);}
+
+(function(){
+  const hash=window.location.hash;
   if(hash.startsWith('#supplier/')){
-    try{
-      const enc=hash.slice('#supplier/'.length);
-      const data=JSON.parse(decodeURIComponent(escape(atob(enc))));
-      renderSupplierView(data); return;
-    } catch(e){}
+    try{renderSupplierView(JSON.parse(decodeURIComponent(escape(atob(hash.slice('#supplier/'.length))))));return;}catch(e){}
   }
   document.getElementById('admin-app').style.display='block';
-  renderSamarbejder();
-  updateBadge();
+  renderProj();updateBadge();
 })();
 </script>
 </body>
