@@ -1348,8 +1348,8 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
   }).join(`<div style="flex:1;height:2px;background:#e2e8f0;margin-top:13px;align-self:flex-start"></div>`);
 
   // ── documents (contract-specific) ──
-  const docRows=docs.filter(d=>d.url||d.file).map(d=>{
-    const href=d.url||d.file||'#';
+  const docRows=docs.filter(d=>d.signedUrl||d.url||d.file).map(d=>{
+    const href=d.signedUrl||d.url||d.file||'#';
     const ext=(href.split('.').pop()||'').toLowerCase().split('?')[0];
     const icon={pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',png:'🖼',jpg:'🖼',jpeg:'🖼'}[ext]||'📎';
     return`<a href="${href}" target="_blank" rel="noopener" download style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;text-decoration:none;transition:background .15s" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#f8fafc'">
@@ -1388,11 +1388,23 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
       <th style="padding:10px 14px;text-align:left;width:60px;color:#475569">Enhed</th>
       ${canPrice?`<th style="padding:10px 14px;text-align:right;width:130px;color:#475569">Din pris (DKK)</th><th style="padding:10px 14px;text-align:left;width:170px;color:#475569">Note</th>`:`<th style="padding:10px 14px;text-align:right;width:130px;color:#475569">Aftalt pris</th>`}
     </tr></thead>
-    <tbody>${lines.map((l,i)=>`<tr data-line-id="${l.id}" style="border-bottom:1px solid #f1f5f9${i%2?';background:#fafafa':''}">
-      <td style="padding:10px 14px"><div style="font-weight:600;color:#0f172a">${esc(l.name)}</div>${l.description?`<div style="font-size:12px;color:#475569;margin-top:3px;white-space:pre-wrap">${esc(l.description)}</div>`:''}</td>
+    <tbody>${lines.map((l,i)=>`<tr data-line-id="${l.id}" style="border-bottom:1px solid #f1f5f9${i%2?';background:#fafafa':''};cursor:pointer" onclick="(function(r){var d=r.nextElementSibling;d.style.display=d.style.display==='table-row'?'none':'table-row';var a=r.querySelector('.det-arr');if(a)a.textContent=d.style.display==='table-row'?'▲':'▼'})(this)">
+      <td style="padding:10px 14px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div style="flex:1;min-width:0"><div style="font-weight:600;color:#0f172a">${esc(l.name)}</div>${l.description?`<div style="font-size:12px;color:#475569;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.description)}</div>`:''}</div>
+          <span class="det-arr" style="font-size:12px;color:#94a3b8;flex-shrink:0;padding-top:3px" title="Klik for detaljer">▼</span>
+        </div>
+      </td>
       <td style="padding:10px 14px;text-align:right;color:#475569">${l.qty||''}</td>
       <td style="padding:10px 14px;color:#475569">${esc(l.unit||'')}</td>
-      ${canPrice?`<td style="padding:10px 14px"><input class="price-input" type="number" min="0" step="0.01" value="${l.supplier_price!=null?l.supplier_price:''}" placeholder="0.00" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 9px;font-size:13px;text-align:right;outline:none" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'"></td><td style="padding:10px 14px"><input class="note-input" type="text" value="${esc(l.supplier_note||'')}" placeholder="Evt. bemærkning" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 9px;font-size:13px;outline:none" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'"></td>`:`<td style="padding:10px 14px;text-align:right;font-weight:600;color:#0f172a">${l.supplier_price!=null?Number(l.supplier_price).toLocaleString('da-DK')+' kr.':'–'}</td>`}
+      ${canPrice?`<td style="padding:10px 14px" onclick="event.stopPropagation()"><input class="price-input" type="number" min="0" step="0.01" value="${l.supplier_price!=null?l.supplier_price:''}" placeholder="0.00" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 9px;font-size:13px;text-align:right;outline:none" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'"></td><td style="padding:10px 14px" onclick="event.stopPropagation()"><input class="note-input" type="text" value="${esc(l.supplier_note||'')}" placeholder="Evt. bemærkning" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 9px;font-size:13px;outline:none" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'"></td>`:`<td style="padding:10px 14px;text-align:right;font-weight:600;color:#0f172a">${l.supplier_price!=null?Number(l.supplier_price).toLocaleString('da-DK')+' kr.':'–'}</td>`}
+    </tr>
+    <tr style="display:none;background:#eff6ff">
+      <td colspan="${canPrice?5:4}" style="padding:14px 20px 14px 28px;border-bottom:2px solid #bfdbfe">
+        <div style="font-size:14px;font-weight:700;color:#1e40af;margin-bottom:6px">${esc(l.name)}</div>
+        ${l.description?`<div style="font-size:13px;color:#334155;line-height:1.7;white-space:pre-wrap;margin-bottom:10px">${esc(l.description)}</div>`:`<div style="font-size:12px;color:#94a3b8;font-style:italic;margin-bottom:10px">Ingen detaljeret beskrivelse tilføjet</div>`}
+        <div style="display:flex;gap:10px;flex-wrap:wrap">${l.qty?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px"><span style="color:#64748b">Antal:</span> <strong>${l.qty}${l.unit?' '+esc(l.unit):''}</strong></div>`:''}${l.est_unit_price!=null?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px"><span style="color:#64748b">Est. enhedspris:</span> <strong>${Number(l.est_unit_price).toLocaleString('da-DK')} kr.</strong></div>`:''}</div>
+      </td>
     </tr>`).join('')}</tbody>
   </table></div>
   ${canPrice?`<div style="padding:16px 24px;display:flex;align-items:center;justify-content:flex-end;gap:12px;border-top:1px solid #f1f5f9">
