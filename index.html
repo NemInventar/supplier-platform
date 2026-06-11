@@ -310,21 +310,24 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
         <option value="delivery">Material Delivery Record</option>
       </select>
     </div>
-    <div class="fg"><label class="fl">Navn *</label><input class="fi" id="dd-name"></div>
-    <div class="fg"><label class="fl">Status</label>
+    <div class="fg" id="dd-name-fg"><label class="fl">Navn *</label><input class="fi" id="dd-name"></div>
+    <div class="fg" id="dd-status-fg"><label class="fl">Status</label>
       <select class="fs" id="dd-status"><option value="template">Skabelon</option><option value="sent">Sendt til underskrift</option><option value="signed">Underskrevet</option></select>
     </div>
-    <div class="fg"><label class="fl">Upload fil (tegning, PDF, DOCX…)</label>
-      <div style="display:flex;gap:8px;align-items:center">
-        <label style="cursor:pointer;background:#f8fafc;border:1px dashed #94a3b8;border-radius:8px;padding:8px 14px;font-size:13px;color:#475569;flex:1;text-align:center;transition:border-color .15s" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#94a3b8'">
-          📎 Vælg fil<input type="file" id="dd-file" style="display:none" onchange="onDocFileSelect(this)">
+    <div class="fg"><label class="fl">Upload filer eller mappe</label>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <label style="cursor:pointer;background:#f8fafc;border:1px dashed #94a3b8;border-radius:8px;padding:8px 12px;font-size:13px;color:#475569;flex:1;text-align:center;transition:border-color .15s" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#94a3b8'">
+          📎 Vælg fil(er)<input type="file" id="dd-file" multiple style="display:none" onchange="onDocFileSelect(this,'file')">
         </label>
-        <span id="dd-file-name" style="font-size:12px;color:#64748b;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <label style="cursor:pointer;background:#f8fafc;border:1px dashed #94a3b8;border-radius:8px;padding:8px 12px;font-size:13px;color:#475569;flex:1;text-align:center;transition:border-color .15s" onmouseover="this.style.borderColor='#16a34a'" onmouseout="this.style.borderColor='#94a3b8'">
+          📁 Upload mappe<input type="file" id="dd-folder" webkitdirectory multiple style="display:none" onchange="onDocFileSelect(this,'folder')">
+        </label>
       </div>
+      <div id="dd-file-preview" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;max-height:140px;overflow-y:auto;font-size:12px;color:#334155"></div>
       <div id="dd-upload-status" style="display:none;font-size:12px;color:#2563eb;margin-top:6px">⏳ Uploader…</div>
     </div>
-    <div class="fg"><label class="fl">Eller indsæt link (OneDrive, Dropbox…)</label><input class="fi" id="dd-url" placeholder="https://..."></div>
-    <div class="fg"><label class="fl">Underskrevet dato</label><input class="fi" id="dd-sdate" type="date"></div>
+    <div class="fg" id="dd-url-fg"><label class="fl">Eller indsæt link (OneDrive, Dropbox…)</label><input class="fi" id="dd-url" placeholder="https://..."></div>
+    <div class="fg" id="dd-sdate-fg"><label class="fl">Underskrevet dato</label><input class="fi" id="dd-sdate" type="date"></div>
   </div>
   <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('doc')">Annuller</button><button class="btn btn-primary" id="dd-save-btn" onclick="saveDoc()">Gem</button></div>
 </div></div>
@@ -2081,44 +2084,82 @@ function openEditCtr(id){const c=state.contracts.find(c=>c.id===id);if(!c)return
 function delCtr(id){if(!confirm('Slet kontrakt?'))return;const c=state.contracts.find(x=>x.id===id);const backPage=c&&c.type==='rfq'?'rfq':'kontrakter';state.contractLines=state.contractLines.filter(l=>l.contractId!==id);state.contracts=state.contracts.filter(c=>c.id!==id);sv();nav(backPage);}
 function saveCtr(){const id=document.getElementById('mc-id').value;const name=document.getElementById('mc-name').value.trim();if(!name){alert('Kontraktnavn påkrævet');return;}const tid=document.getElementById('mc-taskid').value;const bidId=document.getElementById('mc-bidid').value;const task=state.tasks.find(t=>t.id===tid);const bid=state.bids.find(b=>b.id===bidId);const ex=id?state.contracts.find(c=>c.id===id):null;const supId=document.getElementById('mc-sup').value||(bid?bid.supplierId:'')|| (ex?ex.supplierId:'');const projId=document.getElementById('mc-proj-sel').value||(task?task.projectId:'')|| (ex?ex.projectId:'');if(!supId){alert('Leverandør påkrævet');return;}const data={id:id||genId(),num:ex?ex.num:nextCtrNum(),name,type:ex?ex.type||'contract':'contract',taskId:tid||null,bidId:bidId||null,supplierId:supId,projectId:projId||null,stage:document.getElementById('mc-stage').value,amount:parseFloat(document.getElementById('mc-amount').value)||0,deadline:document.getElementById('mc-dead').value,terms:document.getElementById('mc-terms').value.trim(),documents:ex?ex.documents||[]:[],stageDates:ex?ex.stageDates||{}:{},linkSentAt:ex?ex.linkSentAt||null:null,contractType:ex?ex.contractType||'fixed':'fixed',paymentTermsDays:ex?ex.paymentTermsDays||30:30,bidDeadline:ex?ex.bidDeadline||'':'',guaranteeMonths:ex?ex.guaranteeMonths!=null?ex.guaranteeMonths:12:12,milestones:ex?ex.milestones||[]:[], deliveryAddress:ex?ex.deliveryAddress||'':'',createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.contracts.findIndex(c=>c.id===id);if(i>=0)state.contracts[i]=data;}else state.contracts.push(data);sv();closeOv('ctr');if(tid)showTaskDetail(tid,_taskProjId);else showContractDetail(data.id,'kontrakter');}
 
-function openNewDoc(cid){document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value='';['dd-name','dd-url','dd-sdate'].forEach(id=>document.getElementById(id).value='');document.getElementById('dd-tmpl').value='';document.getElementById('dd-status').value='template';document.getElementById('dd-file').value='';document.getElementById('dd-file-name').textContent='';document.getElementById('dd-upload-status').style.display='none';openOv('doc');}
-function openEditDoc(cid,did){const c=state.contracts.find(c=>c.id===cid);if(!c)return;const d=(c.documents||[]).find(d=>d.id===did);if(!d)return;document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value=did;document.getElementById('dd-tmpl').value=d.templateKey||'';document.getElementById('dd-name').value=d.name||'';document.getElementById('dd-status').value=d.status||'template';document.getElementById('dd-url').value=d.signedUrl||'';document.getElementById('dd-sdate').value=d.signedDate||'';document.getElementById('dd-file').value='';document.getElementById('dd-file-name').textContent=d.signedUrl?'(eksisterende fil)':'';document.getElementById('dd-upload-status').style.display='none';openOv('doc');}
-function onDocFileSelect(inp){const f=inp.files&&inp.files[0];document.getElementById('dd-file-name').textContent=f?f.name:'';}
+function _resetDocModal(){['dd-name','dd-url','dd-sdate'].forEach(id=>document.getElementById(id).value='');document.getElementById('dd-tmpl').value='';document.getElementById('dd-status').value='template';document.getElementById('dd-file').value='';document.getElementById('dd-folder').value='';document.getElementById('dd-file-preview').style.display='none';document.getElementById('dd-file-preview').innerHTML='';document.getElementById('dd-upload-status').style.display='none';['dd-name-fg','dd-status-fg','dd-url-fg','dd-sdate-fg'].forEach(id=>document.getElementById(id).style.display='');}
+function openNewDoc(cid){document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value='';_resetDocModal();openOv('doc');}
+function openEditDoc(cid,did){const c=state.contracts.find(c=>c.id===cid);if(!c)return;const d=(c.documents||[]).find(d=>d.id===did);if(!d)return;_resetDocModal();document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value=did;document.getElementById('dd-tmpl').value=d.templateKey||'';document.getElementById('dd-name').value=d.name||'';document.getElementById('dd-status').value=d.status||'template';document.getElementById('dd-url').value=d.signedUrl||'';document.getElementById('dd-sdate').value=d.signedDate||'';openOv('doc');}
+function onDocFileSelect(inp,mode){
+  const files=Array.from(inp.files||[]);
+  if(!files.length)return;
+  // Clear the other input
+  document.getElementById(mode==='file'?'dd-folder':'dd-file').value='';
+  const preview=document.getElementById('dd-file-preview');
+  if(files.length===1){
+    // Single file — show name field, auto-fill name
+    ['dd-name-fg','dd-status-fg','dd-url-fg','dd-sdate-fg'].forEach(id=>document.getElementById(id).style.display='');
+    if(!document.getElementById('dd-name').value)document.getElementById('dd-name').value=files[0].name.replace(/\.[^.]+$/,'');
+    preview.style.display='block';
+    preview.innerHTML=`<span style="color:#16a34a">✓</span> ${files[0].name}`;
+  }else{
+    // Multiple files / folder — hide name/status/url/date, show file list
+    ['dd-name-fg','dd-status-fg','dd-url-fg','dd-sdate-fg'].forEach(id=>document.getElementById(id).style.display='none');
+    const folderName=files[0].webkitRelativePath?files[0].webkitRelativePath.split('/')[0]:'';
+    preview.style.display='block';
+    preview.innerHTML=`<div style="font-weight:600;margin-bottom:4px;color:#1e40af">📁 ${folderName||files.length+' filer'} (${files.length} filer)</div>`
+      +files.slice(0,12).map(f=>`<div style="padding:1px 0">📄 ${f.webkitRelativePath||f.name}</div>`).join('')
+      +(files.length>12?`<div style="color:#94a3b8">… og ${files.length-12} filer mere</div>`:'');
+  }
+}
 function onDocTmpl(){const k=document.getElementById('dd-tmpl').value;if(k&&TMPL[k]){document.getElementById('dd-name').value=TMPL[k].name;const t=state.contractTemplates.find(t=>t.fileName===TMPL[k].file);if(t&&t.fileUrl)document.getElementById('dd-url').value=t.fileUrl;}}
 function delDoc(cid,did){const c=state.contracts.find(c=>c.id===cid);if(!c)return;c.documents=(c.documents||[]).filter(d=>d.id!==did);sv();showContractDetail(cid,_ctrBack);}
 async function saveDoc(){
   const cid=document.getElementById('dd-cid').value;
   const did=document.getElementById('dd-did').value;
-  const name=document.getElementById('dd-name').value.trim();
-  if(!name){alert('Dokumentnavn påkrævet');return;}
   const c=state.contracts.find(c=>c.id===cid);
   if(!c)return;
+  if(!c.documents)c.documents=[];
   const btn=document.getElementById('dd-save-btn');
   const statusEl=document.getElementById('dd-upload-status');
   btn.disabled=true;
-  let signedUrl=document.getElementById('dd-url').value.trim();
-  const file=document.getElementById('dd-file').files&&document.getElementById('dd-file').files[0];
-  if(file){
-    statusEl.style.display='block';statusEl.textContent='⏳ Uploader…';
-    try{
-      const ext=(file.name.split('.').pop()||'').toLowerCase();
-      const MIME={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',dwg:'application/acad',dxf:'application/dxf'};
-      const ct=file.type||MIME[ext]||'application/octet-stream';
-      const path='drawings/'+genId()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      const{data:up,error:ue}=await window.sb.storage.from('contract-docs').upload(path,file,{contentType:ct,upsert:false});
-      if(ue)throw ue;
-      signedUrl=window.sb.storage.from('contract-docs').getPublicUrl(path).data.publicUrl;
-      statusEl.textContent='✓ Uploaded';
-    }catch(e){
-      statusEl.textContent='Fejl: '+e.message;
-      btn.disabled=false;
-      return;
+  const MIME={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',dwg:'application/acad',dxf:'application/dxf'};
+  const uploadFile=async(file)=>{
+    const ext=(file.name.split('.').pop()||'').toLowerCase();
+    const path='drawings/'+genId()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const{error:ue}=await window.sb.storage.from('contract-docs').upload(path,file,{contentType:file.type||MIME[ext]||'application/octet-stream',upsert:false});
+    if(ue)throw ue;
+    return window.sb.storage.from('contract-docs').getPublicUrl(path).data.publicUrl;
+  };
+  // Collect all files from both inputs
+  const allFiles=[...Array.from(document.getElementById('dd-file').files||[]),...Array.from(document.getElementById('dd-folder').files||[])];
+  if(allFiles.length>1){
+    // Multi-file / folder upload — one doc per file
+    statusEl.style.display='block';
+    let ok=0;
+    for(let i=0;i<allFiles.length;i++){
+      const f=allFiles[i];
+      statusEl.textContent=`⏳ Uploader ${i+1}/${allFiles.length}: ${f.name}`;
+      try{
+        const url=await uploadFile(f);
+        const docName=(f.webkitRelativePath||f.name).replace(/\.[^.]+$/,'');
+        c.documents.push({id:genId(),templateKey:null,name:docName,status:'template',signedUrl:url,signedDate:''});
+        ok++;
+      }catch(e){statusEl.textContent=`Fejl ved ${f.name}: ${e.message}`;btn.disabled=false;return;}
     }
+    statusEl.textContent=`✓ ${ok} filer uploadet`;
+    sv();setTimeout(()=>{btn.disabled=false;statusEl.style.display='none';closeOv('doc');showContractDetail(cid,_ctrBack);},800);
+  }else{
+    // Single file or URL
+    const name=document.getElementById('dd-name').value.trim();
+    if(!name){alert('Dokumentnavn påkrævet');btn.disabled=false;return;}
+    let signedUrl=document.getElementById('dd-url').value.trim();
+    if(allFiles.length===1){
+      statusEl.style.display='block';statusEl.textContent='⏳ Uploader…';
+      try{signedUrl=await uploadFile(allFiles[0]);}
+      catch(e){statusEl.textContent='Fejl: '+e.message;btn.disabled=false;return;}
+    }
+    const data={id:did||genId(),templateKey:document.getElementById('dd-tmpl').value||null,name,status:document.getElementById('dd-status').value,signedUrl,signedDate:document.getElementById('dd-sdate').value};
+    if(did){const i=c.documents.findIndex(d=>d.id===did);if(i>=0)c.documents[i]=data;}else c.documents.push(data);
+    sv();btn.disabled=false;statusEl.style.display='none';closeOv('doc');showContractDetail(cid,_ctrBack);
   }
-  if(!c.documents)c.documents=[];
-  const data={id:did||genId(),templateKey:document.getElementById('dd-tmpl').value||null,name,status:document.getElementById('dd-status').value,signedUrl,signedDate:document.getElementById('dd-sdate').value};
-  if(did){const i=c.documents.findIndex(d=>d.id===did);if(i>=0)c.documents[i]=data;}else c.documents.push(data);
-  sv();btn.disabled=false;statusEl.style.display='none';closeOv('doc');showContractDetail(cid,_ctrBack);
 }
 
 function openNewSup(){['ms-id','ms-name','ms-country','ms-cvr','ms-cname','ms-email','ms-phone','ms-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('ms-title').textContent='Tilføj leverandør';document.getElementById('ms-cat').value='produktion';openOv('sup');}
