@@ -231,6 +231,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
       <div class="fg"><label class="fl">Budgetramme (DKK)</label><input class="fi" id="mp-budget" type="number"></div>
       <div class="fg"><label class="fl">Deadline</label><input class="fi" id="mp-dead" type="date"></div>
     </div>
+    <div class="fg"><label class="fl">Adresse / Leveringssted</label><input class="fi" id="mp-address" placeholder="fx. Rruga Nënë Tereza nr. 1, Prishtinë"></div>
     <div class="fg"><label class="fl">Beskrivelse</label><textarea class="ft" id="mp-desc"></textarea></div>
   </div>
   <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('proj')">Annuller</button><button class="btn btn-primary" onclick="saveProj()">Gem</button></div>
@@ -434,6 +435,33 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
   <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('tmpl')">Annuller</button><button class="btn btn-primary" id="tmpl-save-btn" onclick="saveTemplate()">Upload & Gem</button></div>
 </div></div>
 
+<div class="overlay" id="ov-line-edit">
+<div class="modal" style="max-width:620px;width:95vw">
+  <div class="mhead"><div class="mtitle" id="le-title">Rediger opgave</div><button class="mclose" onclick="closeOv('line-edit')">✕</button></div>
+  <div class="mbody" style="max-height:72vh;overflow-y:auto">
+    <input type="hidden" id="le-id"><input type="hidden" id="le-cid">
+    <div class="fg"><label class="fl">Opgavenavn *</label><input class="fi" id="le-name" placeholder="fx. Produktion af skabe – type A"></div>
+    <div class="fg"><label class="fl">Beskrivelse</label><textarea class="ft" id="le-desc" rows="3" placeholder="Detaljeret beskrivelse af hvad leverandøren skal levere"></textarea></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Antal</label><input class="fi" id="le-qty" type="number" min="0" placeholder="fx. 50"></div>
+      <div class="fg"><label class="fl">Enhed</label><input class="fi" id="le-unit" placeholder="stk, m², løbende meter"></div>
+      <div class="fg"><label class="fl">Vores pris (DKK/enhed)</label><input class="fi" id="le-est" type="number" min="0"></div>
+    </div>
+    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:4px"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Detaljer til leverandør</div></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Placering / Zone</label><input class="fi" id="le-location" placeholder="fx. 1. sal, Vestfløj, rum 114"></div>
+      <div class="fg"><label class="fl">Tegnингsnr. / Reference</label><input class="fi" id="le-drawref" placeholder="fx. DWG-2025-042-A"></div>
+    </div>
+    <div class="fg"><label class="fl">Tekniske specifikationer</label><textarea class="ft" id="le-specs" rows="3" placeholder="Mål, materialer, farver, standarder (fx. L=800mm, H=1800mm, laminat birk natur)"></textarea></div>
+    <div class="fg"><label class="fl">Acceptkriterier — hvornår er opgaven godkendt?</label><textarea class="ft" id="le-accept" rows="2" placeholder="fx. Skabe monteret og afleveret uden ridser, låse fungerer, billeddokumentation afleveret"></textarea></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Startdato</label><input class="fi" id="le-start" type="date"></div>
+      <div class="fg"><label class="fl">Slutdato / Levering</label><input class="fi" id="le-end" type="date"></div>
+    </div>
+  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('line-edit')">Annuller</button><button class="btn btn-primary" onclick="saveLineEdit()">Gem</button></div>
+</div></div>
+
 <div class="overlay" id="ov-wiz">
 <div class="modal" style="max-width:700px;width:92vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">
   <div class="mhead"><div class="mtitle" id="wiz-title">Ny RFQ</div><button class="mclose" onclick="closeOv('wiz')">✕</button></div>
@@ -444,7 +472,9 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
     <div class="wiz-line"></div>
     <div class="wiz-stp" id="wstp-3"><div class="wiz-num">3</div><div class="wiz-lbl">Leverancer</div></div>
     <div class="wiz-line"></div>
-    <div class="wiz-stp" id="wstp-4"><div class="wiz-num">4</div><div class="wiz-lbl">Dokumenter</div></div>
+    <div class="wiz-stp" id="wstp-4"><div class="wiz-num">4</div><div class="wiz-lbl">Vilkår</div></div>
+    <div class="wiz-line"></div>
+    <div class="wiz-stp" id="wstp-5"><div class="wiz-num">5</div><div class="wiz-lbl">Dokumenter</div></div>
   </div>
   <div id="wiz-body" style="overflow-y:auto;flex:1;padding:20px 24px"></div>
   <div class="mfooter">
@@ -526,13 +556,13 @@ async function initFromSupabase(){
     reg(proj.data);reg(tasks.data);reg(bids.data);reg(ctr.data);reg(sup.data);reg(disp.data);reg(lines.data);reg(tmpls.data);
     state={
       _version:1,
-      projects:(proj.data||[]).map(r=>({id:r.app_id||r.id,num:r.project_number||'',name:r.name,client:r.customer||'',status:r.status||'active',budget:r.budget_amount||0,deadline:r.deadline||'',description:r.description||'',createdAt:r.created_at})),
+      projects:(proj.data||[]).map(r=>({id:r.app_id||r.id,num:r.project_number||'',name:r.name,client:r.customer||'',address:r.address||'',status:r.status||'active',budget:r.budget_amount||0,deadline:r.deadline||'',description:r.description||'',createdAt:r.created_at})),
       tasks:(tasks.data||[]).map(r=>({id:r.app_id||r.id,num:r.num||'',projectId:appOf(r.project_id),name:r.name,description:r.description||'',estimatedAmount:r.estimated_amount||0,unit:r.unit||'',qty:r.qty||'',createdAt:r.created_at})),
       bids:(bids.data||[]).map(r=>({id:r.app_id||r.id,taskId:appOf(r.task_id),supplierId:appOf(r.supplier_id),amount:r.amount||0,note:r.note||'',submittedAt:r.submitted_at,status:r.status||'pending'})),
-      contracts:(ctr.data||[]).map(r=>({id:r.app_id||r.id,num:r.num||'',name:r.name,type:r.type||'contract',taskId:appOf(r.task_id),bidId:appOf(r.bid_id),supplierId:appOf(r.supplier_id),projectId:appOf(r.project_id),stage:r.stage||'invited',amount:r.amount||0,deadline:r.deadline||'',terms:r.terms||'',documents:r.documents||[],stageDates:r.stage_dates||{},linkSentAt:r.link_sent_at||null,createdAt:r.created_at})),
+      contracts:(ctr.data||[]).map(r=>({id:r.app_id||r.id,num:r.num||'',name:r.name,type:r.type||'contract',taskId:appOf(r.task_id),bidId:appOf(r.bid_id),supplierId:appOf(r.supplier_id),projectId:appOf(r.project_id),stage:r.stage||'invited',amount:r.amount||0,deadline:r.deadline||'',terms:r.terms||'',documents:r.documents||[],stageDates:r.stage_dates||{},linkSentAt:r.link_sent_at||null,contractType:r.contract_type||'fixed',paymentTermsDays:r.payment_terms_days||30,bidDeadline:r.bid_deadline||'',guaranteeMonths:r.guarantee_months!=null?r.guarantee_months:12,milestones:r.milestones||[],deliveryAddress:r.delivery_address||'',createdAt:r.created_at})),
       suppliers:(sup.data||[]).map(r=>({id:r.app_id||r.id,name:r.name,country:r.country||'',cvr:r.cvr||'',cat:(Array.isArray(r.tags)&&r.tags[0])||'andet',cname:r.default_contact_name||'',email:r.default_contact_email||'',phone:r.default_contact_phone||'',notes:r.notes||''})),
       disputes:(disp.data||[]).map(r=>({id:r.app_id||r.id,title:r.title,supplierId:appOf(r.supplier_id),contractId:appOf(r.contract_id),severity:r.severity||'medium',status:r.status||'open',scope:r.scope||'other',description:r.description||'',createdAt:r.created_at,timeline:r.timeline||[]})),
-      contractLines:(lines.data||[]).map(r=>({id:r.app_id||r.id,contractId:appOf(r.contract_id),sortOrder:r.sort_order||0,sourceTable:r.source_table||'',sourceId:r.source_id||null,name:r.name||'',description:r.description||'',unit:r.unit||'',qty:r.qty||0,estUnitPrice:r.est_unit_price||0,supplierPrice:r.supplier_price||null,supplierNote:r.supplier_note||'',pricedAt:r.priced_at||null,createdAt:r.created_at})),
+      contractLines:(lines.data||[]).map(r=>({id:r.app_id||r.id,contractId:appOf(r.contract_id),sortOrder:r.sort_order||0,sourceTable:r.source_table||'',sourceId:r.source_id||null,name:r.name||'',description:r.description||'',unit:r.unit||'',qty:r.qty||0,estUnitPrice:r.est_unit_price||0,supplierPrice:r.supplier_price||null,supplierNote:r.supplier_note||'',pricedAt:r.priced_at||null,location:r.location||'',specifications:r.specifications||'',drawingRef:r.drawing_ref||'',acceptanceCriteria:r.acceptance_criteria||'',startDate:r.start_date||'',endDate:r.end_date||'',createdAt:r.created_at})),
       contractTemplates:(tmpls.data||[]).map(r=>({id:r.app_id||r.id,name:r.name,fileName:r.file_name||'',fileUrl:r.file_url||'',fileSize:r.file_size||0,fileType:r.file_type||'',category:r.category||'other',createdAt:r.created_at})),
       templateUrls:(sett&&sett.data&&sett.data.value)||{}
     };
@@ -545,13 +575,13 @@ async function initFromSupabase(){
   }
 }
 
-const toProjRow=p=>({app_id:p.id,project_number:p.num||'',name:p.name,customer:p.client||'',status:p.status||'active',budget_amount:p.budget||0,deadline:p.deadline||null,description:p.description||'',created_at:p.createdAt});
+const toProjRow=p=>({app_id:p.id,project_number:p.num||'',name:p.name,customer:p.client||'',status:p.status||'active',budget_amount:p.budget||0,deadline:p.deadline||null,description:p.description||'',address:p.address||'',created_at:p.createdAt});
 const toSupRow=s=>({app_id:s.id,name:s.name,country:s.country||'',cvr:s.cvr||'',tags:s.cat?[s.cat]:[],default_contact_name:s.cname||'',default_contact_email:s.email||'',default_contact_phone:s.phone||'',notes:s.notes||'',is_supplier:false,is_contract_supplier:true});
 const toTaskRow=t=>({app_id:t.id,num:t.num||'',project_id:ID.toUuid.get(t.projectId)||null,name:t.name,description:t.description||'',estimated_amount:t.estimatedAmount||0,unit:t.unit||'',qty:t.qty||'',created_at:t.createdAt});
 const toBidRow=b=>({app_id:b.id,task_id:ID.toUuid.get(b.taskId)||null,supplier_id:ID.toUuid.get(b.supplierId)||null,amount:b.amount||0,note:b.note||'',submitted_at:b.submittedAt,status:b.status||'pending'});
-const toCtrRow=c=>({app_id:c.id,num:c.num||'',name:c.name,type:c.type||'contract',task_id:ID.toUuid.get(c.taskId)||null,bid_id:ID.toUuid.get(c.bidId)||null,supplier_id:ID.toUuid.get(c.supplierId)||null,project_id:ID.toUuid.get(c.projectId)||null,stage:c.stage||'invited',amount:c.amount||0,deadline:c.deadline||null,terms:c.terms||'',documents:c.documents||[],stage_dates:c.stageDates||{},link_sent_at:c.linkSentAt||null,created_at:c.createdAt});
+const toCtrRow=c=>({app_id:c.id,num:c.num||'',name:c.name,type:c.type||'contract',task_id:ID.toUuid.get(c.taskId)||null,bid_id:ID.toUuid.get(c.bidId)||null,supplier_id:ID.toUuid.get(c.supplierId)||null,project_id:ID.toUuid.get(c.projectId)||null,stage:c.stage||'invited',amount:c.amount||0,deadline:c.deadline||null,terms:c.terms||'',documents:c.documents||[],stage_dates:c.stageDates||{},link_sent_at:c.linkSentAt||null,contract_type:c.contractType||'fixed',payment_terms_days:c.paymentTermsDays||30,bid_deadline:c.bidDeadline||null,guarantee_months:c.guaranteeMonths!=null?c.guaranteeMonths:12,milestones:c.milestones||[],delivery_address:c.deliveryAddress||'',created_at:c.createdAt});
 const toDispRow=d=>({app_id:d.id,title:d.title,supplier_id:ID.toUuid.get(d.supplierId)||null,contract_id:ID.toUuid.get(d.contractId)||null,severity:d.severity||'medium',status:d.status||'open',scope:d.scope||'other',description:d.description||'',created_at:d.createdAt,timeline:d.timeline||[]});
-const toLineRow=l=>({app_id:l.id,contract_id:ID.toUuid.get(l.contractId)||null,sort_order:l.sortOrder||0,source_table:l.sourceTable||'',source_id:l.sourceId||null,name:l.name||'',description:l.description||'',unit:l.unit||'',qty:l.qty||0,est_unit_price:l.estUnitPrice||0,supplier_price:l.supplierPrice||null,supplier_note:l.supplierNote||'',priced_at:l.pricedAt||null,created_at:l.createdAt});
+const toLineRow=l=>({app_id:l.id,contract_id:ID.toUuid.get(l.contractId)||null,sort_order:l.sortOrder||0,source_table:l.sourceTable||'',source_id:l.sourceId||null,name:l.name||'',description:l.description||'',unit:l.unit||'',qty:l.qty||0,est_unit_price:l.estUnitPrice||0,supplier_price:l.supplierPrice||null,supplier_note:l.supplierNote||'',priced_at:l.pricedAt||null,location:l.location||'',specifications:l.specifications||'',drawing_ref:l.drawingRef||'',acceptance_criteria:l.acceptanceCriteria||'',start_date:l.startDate||null,end_date:l.endDate||null,created_at:l.createdAt});
 const toTmplRow=t=>({app_id:t.id,name:t.name,file_name:t.fileName||'',file_url:t.fileUrl||'',file_size:t.fileSize||0,file_type:t.fileType||'',category:t.category||'other',created_at:t.createdAt});
 
 let _synced=null,_syncTimer=null,_syncing=false;
@@ -896,6 +926,11 @@ function showContractDetail(cid,backTo){
           <tr><td style="color:var(--muted);padding:4px 0">Beløb</td><td style="padding:4px 0 4px 12px;font-weight:700">${fmtM(c.amount)}</td></tr>
           <tr><td style="color:var(--muted);padding:4px 0">Deadline</td><td style="padding:4px 0 4px 12px">${fmtD(c.deadline)}</td></tr>
           ${c.linkSentAt?`<tr><td style="color:var(--muted);padding:4px 0">Sendt</td><td style="padding:4px 0 4px 12px">${fmtD(c.linkSentAt)}</td></tr>`:''}
+          ${c.deliveryAddress?`<tr><td style="color:var(--muted);padding:4px 0;white-space:nowrap">Leveringsadresse</td><td style="padding:4px 0 4px 12px">${esc(c.deliveryAddress)}</td></tr>`:''}
+          ${c.contractType?`<tr><td style="color:var(--muted);padding:4px 0;white-space:nowrap">Kontrakttype</td><td style="padding:4px 0 4px 12px">${{fixed:'Fast pris',unit:'Enhedspris',hourly:'Timebaseret'}[c.contractType]||c.contractType}</td></tr>`:''}
+          ${c.paymentTermsDays?`<tr><td style="color:var(--muted);padding:4px 0;white-space:nowrap">Betalingsbetingelser</td><td style="padding:4px 0 4px 12px">Netto ${c.paymentTermsDays} dage</td></tr>`:''}
+          ${c.bidDeadline?`<tr><td style="color:var(--muted);padding:4px 0;white-space:nowrap">Tilbudsfrist</td><td style="padding:4px 0 4px 12px">${fmtD(c.bidDeadline)}</td></tr>`:''}
+          ${c.guaranteeMonths?`<tr><td style="color:var(--muted);padding:4px 0;white-space:nowrap">Garanti</td><td style="padding:4px 0 4px 12px">${c.guaranteeMonths} måneder</td></tr>`:''}
         </tbody></table>
       </div>
       <div class="card card-pad">
@@ -912,18 +947,19 @@ function showContractDetail(cid,backTo){
         const supTotal=l.supplierPrice!=null&&l.qty?l.supplierPrice*l.qty:null;
         const margin=ourTotal&&supTotal?((ourTotal-supTotal)/ourTotal*100):null;
         return`<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:9px 14px"><div style="font-size:13px;font-weight:500">${esc(l.name)}</div>${l.description?`<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:pre-wrap">${esc(l.description.length>120?l.description.slice(0,120)+'…':l.description)}</div>`:''}</td>
+          <td style="padding:9px 14px"><div style="font-size:13px;font-weight:500">${esc(l.name)}</div>${l.description?`<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:pre-wrap">${esc(l.description.length>100?l.description.slice(0,100)+'…':l.description)}</div>`:''} ${l.location?`<div style="font-size:10px;color:#2563eb;margin-top:2px">📍 ${esc(l.location)}</div>`:''}${l.startDate||l.endDate?`<div style="font-size:10px;color:var(--muted);margin-top:1px">📅 ${l.startDate?fmtD(l.startDate):''}${l.startDate&&l.endDate?' → ':''}${l.endDate?fmtD(l.endDate):''}</div>`:''}</td>
           <td style="padding:9px 14px;text-align:right;color:var(--muted);font-size:12px">${l.qty||''} ${esc(l.unit||'')}</td>
           <td style="padding:9px 14px;text-align:right;color:#7c3aed;font-weight:600;font-size:12px">${ourTotal?fmtM(ourTotal):''}</td>
           <td style="padding:9px 14px;text-align:right;font-size:12px">${supTotal!=null?`<div style="font-weight:600">${fmtM(supTotal)}</div>${l.supplierNote?`<div style="font-size:10px;color:var(--muted)">${esc(l.supplierNote)}</div>`:''}`:anyPriced?'–':'<span style="color:var(--muted2);font-style:italic">Afventer</span>'}</td>
           <td style="padding:9px 14px;text-align:right;font-size:12px">${margin!=null?`<span style="font-weight:700;color:${margin>=0?'var(--green)':'var(--red)'}">${margin.toFixed(1)}%</span>`:''}</td>
+          <td style="padding:9px 14px"><button class="btn btn-ghost btn-xs" onclick="openLineEdit('${l.id}')">Rediger</button></td>
         </tr>`;
       }).join('');
       const totalOur=lines.reduce((s,l)=>s+(l.estUnitPrice&&l.qty?l.estUnitPrice*l.qty:0),0);
       const totalSup=lines.reduce((s,l)=>s+(l.supplierPrice!=null&&l.qty?l.supplierPrice*l.qty:0),0);
       const totMargin=totalOur&&totalSup?((totalOur-totalSup)/totalOur*100):null;
       return`<div class="section-card">
-        <div class="section-head"><div class="section-title">Opgaver & Priser (${lines.length})</div>${anyPriced?`<span class="badge b-green">💰 Leverandørpriser modtaget</span>`:''}</div>
+        <div class="section-head"><div class="section-title">Opgaver & Priser (${lines.length})</div><div style="display:flex;gap:8px;align-items:center">${anyPriced?`<span class="badge b-green">💰 Leverandørpriser modtaget</span>`:''}<button class="btn btn-ghost btn-sm" onclick="openLineEdit(null,'${cid}')">+ Tilføj linje</button></div></div>
         <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="background:var(--bg);border-bottom:2px solid var(--border)">
@@ -932,6 +968,7 @@ function showContractDetail(cid,backTo){
             <th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;color:#7c3aed">🔒 Vores pris</th>
             <th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--muted)">Leverandørbud</th>
             <th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--muted)">Margin</th>
+            <th style="padding:8px 14px;font-size:11px;font-weight:700;color:var(--muted)"></th>
           </tr></thead>
           <tbody>${rows}</tbody>
           ${totalOur||totalSup?`<tfoot><tr style="background:var(--bg);border-top:2px solid var(--border)">
@@ -946,6 +983,28 @@ function showContractDetail(cid,backTo){
     <div class="section-card">
       <div class="section-head"><div class="section-title">Dokumenter (${docs.length})</div><button class="btn btn-primary btn-sm" onclick="openNewDoc('${cid}')">+ Tilknyt dokument</button></div>
       <div style="padding:0 18px">${docsHtml}</div>
+    </div>
+    ${(()=>{
+      const ms=c.milestones||[];
+      const MTYPES={delivery:'Levering',inspection:'Besigtigelse',payment:'Betaling',handover:'Aflevering',other:'Andet'};
+      const msRows=ms.length?ms.map((m,i)=>`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 14px;font-size:13px">${esc(m.title||'')}</td>
+        <td style="padding:8px 14px;font-size:12px;color:var(--muted);white-space:nowrap">${fmtD(m.due_date)}</td>
+        <td style="padding:8px 14px"><span class="badge b-blue" style="font-size:10px">${MTYPES[m.type]||m.type||'Levering'}</span></td>
+        <td style="padding:8px 14px"><button class="btn btn-danger btn-xs" onclick="ctrRemoveMilestone('${cid}',${i})">✕</button></td>
+      </tr>`).join(''):'<tr><td colspan="4" class="empty-row">Ingen milepæle tilføjet</td></tr>';
+      return`<div class="section-card">
+        <div class="section-head"><div class="section-title">Milepæle (${ms.length})</div><button class="btn btn-ghost btn-sm" onclick="ctrAddMilestone('${cid}')">+ Tilføj milepæl</button></div>
+        <table><thead><tr><th>Beskrivelse</th><th>Dato</th><th>Type</th><th></th></tr></thead><tbody>${msRows}</tbody></table>
+      </div>`;
+    })()}
+    <div class="section-card" id="qa-section-${cid}">
+      <div class="section-head"><div class="section-title">Spørgsmål & Svar</div><button class="btn btn-ghost btn-sm" onclick="loadAdminMessages('${cid}')">🔄 Opdater</button></div>
+      <div id="qa-messages-${cid}" style="padding:12px 18px;min-height:60px;color:var(--muted);font-size:13px">Klik "Opdater" for at se beskeder fra leverandøren</div>
+      <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px">
+        <input class="fi" id="qa-input-${cid}" placeholder="Skriv svar til leverandøren..." style="flex:1;font-size:13px">
+        <button class="btn btn-primary btn-sm" onclick="sendAdminMessage('${cid}')">Send svar</button>
+      </div>
     </div>
     <div class="section-card">
       <div class="section-head"><div class="section-title">Disputes (${disps.length})</div><button class="btn btn-ghost btn-sm" onclick="openNewDisp('${c.supplierId}','${cid}')">+ Registrer dispute</button></div>
@@ -1316,10 +1375,11 @@ async function renderSupplierPortal(token){
     const[{data:lns},{data:sup},{data:prj},{data:tmpls}]=await Promise.all([
       sb.from('sp_contract_lines').select('*').eq('contract_id',c.id).order('sort_order'),
       sb.from('companies_2026_04_27').select('name,default_contact_name,default_contact_email,default_contact_phone').eq('id',c.supplier_id).maybeSingle(),
-      sb.from('projects_2026_01_15_06_45').select('name,project_number,deadline,description').eq('id',c.project_id).maybeSingle(),
+      sb.from('projects_2026_01_15_06_45').select('name,project_number,deadline,description,address').eq('id',c.project_id).maybeSingle(),
       sb.from('sp_contract_templates').select('*').order('created_at')
     ]);
     renderPortalHTML(token,c,lns||[],sup,prj,tmpls||[]);
+    loadSupplierMessages(c.id);
   }catch(e){
     sv.innerHTML=`<div style="background:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif"><div style="background:#fff;border-radius:14px;padding:40px;text-align:center;max-width:420px;box-shadow:0 4px 24px rgba(0,0,0,.1)"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px">Link ikke tilgængeligt</div><div style="font-size:13px;color:#64748b">${esc(e.message)}</div><div style="margin-top:16px;font-size:12px;color:#94a3b8">Kontakt venligst <a href="mailto:kontakt@neminventar.dk" style="color:#2563eb">kontakt@neminventar.dk</a></div></div></div>`;
   }
@@ -1403,7 +1463,9 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
       <td colspan="${canPrice?5:4}" style="padding:14px 20px 14px 28px;border-bottom:2px solid #bfdbfe">
         <div style="font-size:14px;font-weight:700;color:#1e40af;margin-bottom:6px">${esc(l.name)}</div>
         ${l.description?`<div style="font-size:13px;color:#334155;line-height:1.7;white-space:pre-wrap;margin-bottom:10px">${esc(l.description)}</div>`:`<div style="font-size:12px;color:#94a3b8;font-style:italic;margin-bottom:10px">Ingen detaljeret beskrivelse tilføjet</div>`}
-        <div style="display:flex;gap:10px;flex-wrap:wrap">${l.qty?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px"><span style="color:#64748b">Antal:</span> <strong>${l.qty}${l.unit?' '+esc(l.unit):''}</strong></div>`:''}${l.est_unit_price!=null?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px"><span style="color:#64748b">Est. enhedspris:</span> <strong>${Number(l.est_unit_price).toLocaleString('da-DK')} kr.</strong></div>`:''}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${l.qty?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px"><span style="color:#64748b">Antal:</span> <strong>${l.qty}${l.unit?' '+esc(l.unit):''}</strong></div>`:''}${l.location?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px">📍 <strong>${esc(l.location)}</strong></div>`:''}${l.drawing_ref?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px">📐 <strong>${esc(l.drawing_ref)}</strong></div>`:''}${l.start_date||l.end_date?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px">📅 <strong>${l.start_date?fmtD(l.start_date):''}${l.start_date&&l.end_date?' → ':''}${l.end_date?fmtD(l.end_date):''}</strong></div>`:''}</div>
+        ${l.specifications?`<div style="font-size:12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px">Tekniske specifikationer</div><div style="color:#334155;line-height:1.6;white-space:pre-wrap">${esc(l.specifications)}</div></div>`:''}
+        ${l.acceptance_criteria?`<div style="font-size:12px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 12px"><div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:4px">✓ Acceptkriterier</div><div style="color:#78350f;line-height:1.6;white-space:pre-wrap">${esc(l.acceptance_criteria)}</div></div>`:''}
       </td>
     </tr>`).join('')}</tbody>
   </table></div>
@@ -1442,13 +1504,19 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
 
     <!-- CONTRACT DETAILS -->
     ${card('Kontraktinformation',`
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:${c.terms?'14px':'0'}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">
         ${[['Kontrakt',(c.num?'<span style="font-size:11px;color:#64748b">'+esc(c.num)+'</span> ':'')+esc(c.name)],
            ['Projekt',esc(prj?.name||'–')+(prj?.project_number?' <span style="font-size:11px;color:#94a3b8">('+esc(prj.project_number)+')</span>':'')],
            ['Aftalt beløb',c.amount?'<strong>'+Number(c.amount).toLocaleString('da-DK')+' kr.</strong>':'–'],
-           ['Leveringsfrist',c.deadline?'<strong style="color:'+(new Date(c.deadline)<new Date()?'#dc2626':'#0f172a')+'">'+fmtD(c.deadline)+'</strong>':'–']
-          ].map(([k,v])=>`<div style="background:#f8fafc;border-radius:8px;padding:11px 13px"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${k}</div><div style="font-size:13px;color:#0f172a">${v}</div></div>`).join('')}
+           ['Leveringsfrist',c.deadline?'<strong style="color:'+(new Date(c.deadline)<new Date()?'#dc2626':'#0f172a')+'">'+fmtD(c.deadline)+'</strong>':'–'],
+           c.contract_type?['Kontrakttype',{fixed:'Fast pris',unit:'Enhedspris',hourly:'Timebaseret'}[c.contract_type]||c.contract_type]:null,
+           c.payment_terms_days?['Betaling','Netto '+c.payment_terms_days+' dage']:null,
+           c.guarantee_months?['Garanti',c.guarantee_months+' måneder']:null,
+           c.bid_deadline?['Tilbudsfrist','<strong>'+fmtD(c.bid_deadline)+'</strong>']:null
+          ].filter(Boolean).map(([k,v])=>`<div style="background:#f8fafc;border-radius:8px;padding:11px 13px"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${k}</div><div style="font-size:13px;color:#0f172a">${v}</div></div>`).join('')}
       </div>
+      ${c.delivery_address?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:13px;color:#1e40af;margin-bottom:10px;display:flex;align-items:flex-start;gap:8px"><span>📍</span><div><strong>Leveringsadresse:</strong> ${esc(c.delivery_address)}</div></div>`:''}
+      ${prj?.address?`<div style="font-size:12px;color:#64748b;background:#f8fafc;border-radius:8px;padding:10px 13px;margin-bottom:10px;display:flex;gap:8px"><span>🏗️</span><div><strong style="color:#475569">Projektadresse:</strong> ${esc(prj.address)}</div></div>`:''}
       ${prj?.description?`<div style="font-size:12px;color:#64748b;background:#f8fafc;border-radius:8px;padding:10px 13px;margin-bottom:10px;line-height:1.6"><strong style="color:#475569">Projektbeskrivelse:</strong> ${esc(prj.description)}</div>`:''}
       ${c.terms?`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;font-size:13px;color:#78350f;line-height:1.7;white-space:pre-wrap"><strong>Vilkår & betingelser:</strong>\n${esc(c.terms)}</div>`:''}
     `)}
@@ -1456,7 +1524,18 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
     <!-- STAGE TIMELINE -->
     ${card('Forløb & tidsplan',`
       <div style="display:flex;align-items:flex-start;gap:0;margin-bottom:16px">${timelineHtml}</div>
-      ${c.deadline?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:13px;color:#1e40af;display:flex;align-items:center;gap:8px"><span>📅</span><span>Forventet levering: <strong>${fmtD(c.deadline)}</strong>${new Date(c.deadline)<new Date()?' <span style="color:#dc2626;font-size:11px">(overskredet)</span>':''}</span></div>`:''}
+      ${c.deadline?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:13px;color:#1e40af;display:flex;align-items:center;gap:8px;margin-bottom:${(c.milestones||[]).length?'12px':'0'}"><span>📅</span><span>Forventet levering: <strong>${fmtD(c.deadline)}</strong>${new Date(c.deadline)<new Date()?' <span style="color:#dc2626;font-size:11px">(overskredet)</span>':''}</span></div>`:''}
+      ${(c.milestones||[]).length?`<div><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Milepæle</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${(c.milestones||[]).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')).map(m=>{
+        const isPast=m.due_date&&new Date(m.due_date)<new Date();
+        const MLBL={delivery:'Levering',inspection:'Besigtigelse',payment:'Betaling',handover:'Aflevering',other:'Andet'};
+        return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isPast?'#f0fdf4':'#f8fafc'};border:1px solid ${isPast?'#86efac':'#e2e8f0'};border-radius:8px">
+          <span style="font-size:14px">${isPast?'✅':'🗓️'}</span>
+          <div style="flex:1"><div style="font-size:13px;font-weight:600;color:#0f172a">${esc(m.title||'')}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:1px">${MLBL[m.type]||'Levering'}${m.due_date?' · '+fmtD(m.due_date):''}</div></div>
+          ${m.due_date&&new Date(m.due_date)<new Date()?'':'<div style="font-size:11px;color:#94a3b8;white-space:nowrap">'+fmtD(m.due_date)+'</div>'}
+        </div>`;
+      }).join('')}</div></div>`:''}
     `)}
 
     <!-- DOCUMENTS -->
@@ -1474,6 +1553,18 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
 
     <!-- PRICING / TASKS -->
     ${card(`Opgaver & prissætning <span style="font-size:11px;font-weight:400;color:#94a3b8">(${lines.length} ${lines.length===1?'opgave':'opgaver'})</span>`,linesHtml)}
+
+    <!-- Q&A -->
+    ${card('Spørgsmål & Svar',`
+      <div id="sup-qa-msgs" style="min-height:50px;margin-bottom:12px"><div style="font-size:13px;color:#94a3b8;font-style:italic">Henter beskeder...</div></div>
+      <div style="border-top:1px solid #f1f5f9;padding-top:12px">
+        <div style="font-size:12px;color:#64748b;margin-bottom:8px">Har du spørgsmål til opgaven? Send os en besked her:</div>
+        <div style="display:flex;gap:8px">
+          <input id="sup-qa-input" class="fi" placeholder="fx. Hvilken RAL-farve på skabene?" style="flex:1;font-size:13px">
+          <button onclick="sendSupplierQuestion('${esc(token)}')" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Send</button>
+        </div>
+      </div>
+    `)}
 
     <!-- CONTACT -->
     ${card('Kontakt',`
@@ -1520,22 +1611,62 @@ async function submitSupplierPrices(token){
   }
 }
 
+// ── SUPPLIER Q&A ──
+async function loadSupplierMessages(contractId){
+  const el=document.getElementById('sup-qa-msgs');if(!el)return;
+  const{data,error}=await sb.from('sp_contract_messages').select('*').eq('contract_id',contractId).order('created_at');
+  if(error||!data){el.innerHTML='<div style="font-size:12px;color:#94a3b8;font-style:italic">Ingen beskeder endnu</div>';return;}
+  if(!data.length){el.innerHTML='<div style="font-size:12px;color:#94a3b8;font-style:italic">Ingen beskeder endnu — stil dit første spørgsmål nedenfor</div>';return;}
+  el.innerHTML=data.map(m=>`<div style="display:flex;flex-direction:column;align-items:${m.from_supplier?'flex-end':'flex-start'};margin-bottom:8px">
+    <div style="max-width:85%;background:${m.from_supplier?'#eff6ff':'#f0fdf4'};border:1px solid ${m.from_supplier?'#bfdbfe':'#86efac'};border-radius:10px;padding:10px 14px">
+      <div style="font-size:11px;font-weight:700;color:${m.from_supplier?'#2563eb':'#16a34a'};margin-bottom:3px">${m.from_supplier?'Du':'✓ NemInventar'}</div>
+      <div style="font-size:13px;color:#0f172a;line-height:1.5;white-space:pre-wrap">${esc(m.message)}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:4px">${m.created_at?new Date(m.created_at).toLocaleString('da-DK',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):''}</div>
+    </div>
+  </div>`).join('');
+}
+async function sendSupplierQuestion(token){
+  const inp=document.getElementById('sup-qa-input');
+  const msg=inp?.value?.trim();
+  if(!msg)return;
+  const{data:tk}=await sb.from('sp_contract_tokens').select('contract_id').eq('token',token).single();
+  if(!tk?.contract_id){alert('Ugyldigt link');return;}
+  const supName=document.querySelector('.sup-name-tag')?.textContent||'Leverandør';
+  const{error}=await sb.from('sp_contract_messages').insert({contract_id:tk.contract_id,from_supplier:true,message:msg,supplier_name:supName});
+  if(error){alert('Fejl: '+error.message);return;}
+  if(inp)inp.value='';
+  loadSupplierMessages(tk.contract_id);
+}
+
 // ── CLM WIZARD ──
-let _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[],type:'rfq'};
+let _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[],type:'rfq',contractType:'fixed',paymentTermsDays:30,bidDeadline:'',guaranteeMonths:12,deliveryAddress:'',milestones:[]};
 
 function openRFQWizard(){
-  _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[],type:'rfq'};
+  _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[],type:'rfq',contractType:'fixed',paymentTermsDays:30,bidDeadline:'',guaranteeMonths:12,deliveryAddress:'',milestones:[]};
   document.getElementById('wiz-title').textContent='Ny RFQ';
   wizRender();
   openOv('wiz');
 }
 
+function wizMilestonesHtml(){
+  const MTYPES={delivery:'Levering',inspection:'Besigtigelse',payment:'Betaling',handover:'Aflevering',other:'Andet'};
+  if(!_wiz.milestones.length)return'<div style="color:#94a3b8;font-size:12px;font-style:italic;padding:6px 0">Ingen milepæle – tilføj nøgledatoer nedenfor</div>';
+  return _wiz.milestones.map((m,i)=>`<div style="display:grid;grid-template-columns:1fr 145px 130px 32px;gap:8px;align-items:center;margin-bottom:6px">
+    <input class="fi" placeholder="fx. Dellevering 1 – 50 skabe" value="${esc(m.title||'')}" oninput="_wiz.milestones[${i}].title=this.value" style="font-size:13px">
+    <input class="fi" type="date" value="${m.due_date||''}" oninput="_wiz.milestones[${i}].due_date=this.value" style="font-size:13px">
+    <select class="fs" onchange="_wiz.milestones[${i}].type=this.value" style="font-size:13px">${Object.entries(MTYPES).map(([k,v])=>`<option value="${k}"${m.type===k?' selected':''}>${v}</option>`).join('')}</select>
+    <button class="btn btn-danger btn-sm" onclick="wizRemoveMilestone(${i})" style="padding:5px 8px">✕</button>
+  </div>`).join('');
+}
+function wizAddMilestone(){_wiz.milestones.push({title:'',due_date:'',type:'delivery'});const el=document.getElementById('wiz-ms-list');if(el)el.innerHTML=wizMilestonesHtml();}
+function wizRemoveMilestone(i){_wiz.milestones.splice(i,1);const el=document.getElementById('wiz-ms-list');if(el)el.innerHTML=wizMilestonesHtml();}
+
 function wizRender(){
   const s=_wiz.step;
-  [1,2,3,4].forEach(i=>{const el=document.getElementById('wstp-'+i);if(el)el.className='wiz-stp'+(i===s?' active':i<s?' done':'');});
+  [1,2,3,4,5].forEach(i=>{const el=document.getElementById('wstp-'+i);if(el)el.className='wiz-stp'+(i===s?' active':i<s?' done':'');});
   const prev=document.getElementById('wiz-prev');const nxt=document.getElementById('wiz-next');
   if(prev)prev.style.display=s>1?'':'none';
-  if(nxt)nxt.textContent=s===4?'Send RFQ':'Næste →';
+  if(nxt)nxt.textContent=s===5?'Send RFQ':'Næste →';
   const body=document.getElementById('wiz-body');
   if(!body)return;
   if(s===1){
@@ -1586,6 +1717,37 @@ function wizRender(){
     </div>
     <div style="font-size:11px;color:#94a3b8;margin-top:8px">${_wiz.items.length} element(er) valgt</div>`;
     if(_wiz._src!=='tasks'&&!_wiz._erpItems.length)wizLoadItems(_wiz._src);
+  }else if(s===4){
+    const CTR_TYPES={fixed:'Fast pris (total sum)',unit:'Enhedspris (pr. stk.)',hourly:'Timebaseret'};
+    body.innerHTML=`<div style="display:grid;gap:16px">
+      <div class="fg"><label class="fl">Leveringsadresse *</label>
+        <input class="fi" id="wiz-delivery" value="${esc(_wiz.deliveryAddress||'')}" placeholder="fx. Rruga Nënë Tereza nr. 5, Prishtinë" oninput="_wiz.deliveryAddress=this.value">
+        <div style="font-size:11px;color:#94a3b8;margin-top:3px">Vises til leverandøren som opgavens leveringssted</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg"><label class="fl">Kontrakttype</label>
+          <select class="fs" onchange="_wiz.contractType=this.value">${Object.entries(CTR_TYPES).map(([k,v])=>`<option value="${k}"${(_wiz.contractType||'fixed')===k?' selected':''}>${v}</option>`).join('')}</select>
+        </div>
+        <div class="fg"><label class="fl">Betalingsbetingelser (dage netto)</label>
+          <input class="fi" type="number" min="0" max="365" value="${_wiz.paymentTermsDays||30}" oninput="_wiz.paymentTermsDays=parseInt(this.value)||30">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg"><label class="fl">Tilbudsfrist</label>
+          <input class="fi" type="date" value="${_wiz.bidDeadline||''}" oninput="_wiz.bidDeadline=this.value">
+        </div>
+        <div class="fg"><label class="fl">Garantiperiode (måneder)</label>
+          <input class="fi" type="number" min="0" max="120" value="${_wiz.guaranteeMonths!=null?_wiz.guaranteeMonths:12}" oninput="_wiz.guaranteeMonths=parseInt(this.value)||0">
+        </div>
+      </div>
+      <div class="fg">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="fl" style="margin:0">Milepæle & nøgledatoer</label>
+          <button class="btn btn-ghost btn-sm" onclick="wizAddMilestone()">+ Tilføj milepæl</button>
+        </div>
+        <div id="wiz-ms-list">${wizMilestonesHtml()}</div>
+      </div>
+    </div>`;
   }else{
     body.innerHTML=`
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Tilføj tegninger, tekniske specifikationer eller andre dokumenter leverandøren skal kunne downloade fra portalen.</div>
@@ -1685,11 +1847,12 @@ function wizNext(){
   if(_wiz.step===1){if(!_wiz.supplierId){alert('Vælg en leverandør for at fortsætte');return;}wizGo(2);}
   else if(_wiz.step===2){if(!_wiz.projectId){alert('Vælg et projekt for at fortsætte');return;}wizGo(3);}
   else if(_wiz.step===3){wizGo(4);}
+  else if(_wiz.step===4){wizGo(5);}
   else{saveWizard();}
 }
 
 function wizGo(step){
-  if(step<1||step>4)return;
+  if(step<1||step>5)return;
   _wiz.step=step;
   wizRender();
 }
@@ -1713,6 +1876,108 @@ function wizRemoveDoc(i){
   if(list)list.innerHTML=wizDocsHtml();
 }
 
+// ── LINE EDIT ──
+function openLineEdit(lineId, contractId){
+  if(lineId){
+    const l=state.contractLines.find(x=>x.id===lineId);if(!l)return;
+    document.getElementById('le-title').textContent='Rediger opgave';
+    document.getElementById('le-id').value=lineId;
+    document.getElementById('le-cid').value=l.contractId;
+    document.getElementById('le-name').value=l.name||'';
+    document.getElementById('le-desc').value=l.description||'';
+    document.getElementById('le-qty').value=l.qty||'';
+    document.getElementById('le-unit').value=l.unit||'';
+    document.getElementById('le-est').value=l.estUnitPrice||'';
+    document.getElementById('le-location').value=l.location||'';
+    document.getElementById('le-drawref').value=l.drawingRef||'';
+    document.getElementById('le-specs').value=l.specifications||'';
+    document.getElementById('le-accept').value=l.acceptanceCriteria||'';
+    document.getElementById('le-start').value=l.startDate||'';
+    document.getElementById('le-end').value=l.endDate||'';
+  }else{
+    document.getElementById('le-title').textContent='Tilføj opgave';
+    ['le-id','le-name','le-desc','le-qty','le-unit','le-est','le-location','le-drawref','le-specs','le-accept','le-start','le-end'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('le-cid').value=contractId||'';
+  }
+  openOv('line-edit');
+}
+function saveLineEdit(){
+  const lid=document.getElementById('le-id').value;
+  const cid=document.getElementById('le-cid').value;
+  const name=document.getElementById('le-name').value.trim();
+  if(!name){alert('Opgavenavn påkrævet');return;}
+  const data={
+    id:lid||genId(),contractId:cid,
+    sortOrder:lid?(state.contractLines.find(l=>l.id===lid)?.sortOrder||0):state.contractLines.filter(l=>l.contractId===cid).length,
+    sourceTable:'',sourceId:null,
+    name,description:document.getElementById('le-desc').value.trim(),
+    qty:parseFloat(document.getElementById('le-qty').value)||0,
+    unit:document.getElementById('le-unit').value.trim(),
+    estUnitPrice:parseFloat(document.getElementById('le-est').value)||0,
+    supplierPrice:lid?(state.contractLines.find(l=>l.id===lid)?.supplierPrice||null):null,
+    supplierNote:lid?(state.contractLines.find(l=>l.id===lid)?.supplierNote||''):'',
+    pricedAt:lid?(state.contractLines.find(l=>l.id===lid)?.pricedAt||null):null,
+    location:document.getElementById('le-location').value.trim(),
+    specifications:document.getElementById('le-specs').value.trim(),
+    drawingRef:document.getElementById('le-drawref').value.trim(),
+    acceptanceCriteria:document.getElementById('le-accept').value.trim(),
+    startDate:document.getElementById('le-start').value||'',
+    endDate:document.getElementById('le-end').value||'',
+    createdAt:lid?(state.contractLines.find(l=>l.id===lid)?.createdAt||new Date().toISOString().split('T')[0]):new Date().toISOString().split('T')[0]
+  };
+  if(lid){const i=state.contractLines.findIndex(l=>l.id===lid);if(i>=0)state.contractLines[i]=data;}
+  else state.contractLines.push(data);
+  sv();closeOv('line-edit');showContractDetail(cid,_ctrBack);
+}
+
+// ── CONTRACT MILESTONES ──
+const MTYPES_LABELS={delivery:'Levering',inspection:'Besigtigelse',payment:'Betaling',handover:'Aflevering',other:'Andet'};
+function ctrAddMilestone(cid){
+  const title=prompt('Milepælsbeskrivelse (fx. Dellevering 1 – 30 skabe):');
+  if(!title)return;
+  const due=prompt('Dato (ÅÅÅÅ-MM-DD):');
+  const c=state.contracts.find(c=>c.id===cid);if(!c)return;
+  if(!c.milestones)c.milestones=[];
+  c.milestones.push({title:title.trim(),due_date:due||'',type:'delivery'});
+  sv();showContractDetail(cid,_ctrBack);
+}
+function ctrRemoveMilestone(cid,idx){
+  const c=state.contracts.find(c=>c.id===cid);if(!c||!c.milestones)return;
+  c.milestones.splice(idx,1);sv();showContractDetail(cid,_ctrBack);
+}
+
+// ── Q&A MESSAGES ──
+async function loadAdminMessages(cid){
+  const cUuid=ID.toUuid.get(cid);
+  const el=document.getElementById('qa-messages-'+cid);
+  if(!el)return;
+  if(!cUuid){el.innerHTML='<div style="color:var(--muted);font-size:13px">Kontrakt er ikke synkroniseret endnu</div>';return;}
+  el.innerHTML='<div style="color:var(--muted);font-size:13px">⏳ Henter...</div>';
+  const{data,error}=await sb.from('sp_contract_messages').select('*').eq('contract_id',cUuid).order('created_at');
+  if(error){el.innerHTML=`<div style="color:#dc2626;font-size:12px">Fejl: ${esc(error.message)}</div>`;return;}
+  if(!data||!data.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;font-style:italic">Ingen beskeder endnu</div>';return;}
+  // Mark unread supplier messages as read
+  const unread=data.filter(m=>m.from_supplier&&!m.read_at).map(m=>m.id);
+  if(unread.length)await sb.from('sp_contract_messages').update({read_at:new Date().toISOString()}).in('id',unread);
+  el.innerHTML=data.map(m=>`<div style="display:flex;flex-direction:column;align-items:${m.from_supplier?'flex-start':'flex-end'};margin-bottom:10px">
+    <div style="max-width:80%;background:${m.from_supplier?'#f1f5f9':'#eff6ff'};border:1px solid ${m.from_supplier?'#e2e8f0':'#bfdbfe'};border-radius:10px;padding:10px 14px">
+      <div style="font-size:11px;font-weight:700;color:${m.from_supplier?'#475569':'#2563eb'};margin-bottom:4px">${m.from_supplier?'🏭 '+(esc(m.supplier_name||'Leverandør')):'👤 NemInventar'}</div>
+      <div style="font-size:13px;color:#0f172a;line-height:1.5;white-space:pre-wrap">${esc(m.message)}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:6px">${m.created_at?new Date(m.created_at).toLocaleString('da-DK',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):''}</div>
+    </div>
+  </div>`).join('');
+}
+async function sendAdminMessage(cid){
+  const cUuid=ID.toUuid.get(cid);
+  const inp=document.getElementById('qa-input-'+cid);
+  const msg=inp?.value?.trim();
+  if(!msg||!cUuid){alert('Skriv en besked og sørg for at kontrakten er synkroniseret');return;}
+  const{error}=await sb.from('sp_contract_messages').insert({contract_id:cUuid,from_supplier:false,message:msg,supplier_name:'NemInventar'});
+  if(error){alert('Fejl: '+error.message);return;}
+  if(inp)inp.value='';
+  loadAdminMessages(cid);
+}
+
 function saveWizard(){
   const nameEl=document.getElementById('wiz-name');
   const name=(nameEl?nameEl.value:_wiz.contractName).trim();
@@ -1721,7 +1986,7 @@ function saveWizard(){
   const cid=genId();
   const docs=_wiz.docs.filter(d=>d.name&&d.url).map(d=>({id:genId(),name:d.name,signedUrl:d.url,status:'template',templateKey:null}));
   const type=_wiz.type||'rfq';
-  const c={id:cid,num:nextCtrNum(),name,type,taskId:null,bidId:null,supplierId:_wiz.supplierId,projectId:_wiz.projectId||null,stage:'invited',amount:0,deadline:'',terms:'',documents:docs,stageDates:{invited:new Date().toISOString().split('T')[0]},linkSentAt:null,createdAt:new Date().toISOString().split('T')[0]};
+  const c={id:cid,num:nextCtrNum(),name,type,taskId:null,bidId:null,supplierId:_wiz.supplierId,projectId:_wiz.projectId||null,stage:'invited',amount:0,deadline:'',terms:'',documents:docs,stageDates:{invited:new Date().toISOString().split('T')[0]},linkSentAt:null,contractType:_wiz.contractType||'fixed',paymentTermsDays:_wiz.paymentTermsDays||30,bidDeadline:_wiz.bidDeadline||'',guaranteeMonths:_wiz.guaranteeMonths!=null?_wiz.guaranteeMonths:12,deliveryAddress:_wiz.deliveryAddress||'',milestones:_wiz.milestones||[],createdAt:new Date().toISOString().split('T')[0]};
   state.contracts.push(c);
   const newLines=_wiz.items.map((it,i)=>({id:genId(),contractId:cid,sortOrder:i,sourceTable:it.sourceTable||'',sourceId:it._id&&!String(it._id).startsWith('_')?it._id:null,name:it.name,description:it.description||'',unit:it.unit||'',qty:parseFloat(it.qty)||0,estUnitPrice:it.estUnitPrice||0,supplierPrice:null,supplierNote:'',pricedAt:null,createdAt:new Date().toISOString().split('T')[0]}));
   state.contractLines=[...state.contractLines,...newLines];
@@ -1736,10 +2001,10 @@ function closeOv(n){document.getElementById('ov-'+n).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 function fillSupSel(el,selId){el.innerHTML='<option value="">– Vælg leverandør –</option>'+state.suppliers.map(s=>`<option value="${s.id}"${s.id===selId?' selected':''}>${esc(s.name)}</option>`).join('');if(selId)el.value=selId;}
 
-function openNewProj(){['mp-id','mp-name','mp-client','mp-budget','mp-dead','mp-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('mp-title').textContent='Nyt projekt';document.getElementById('mp-status').value='active';openOv('proj');}
-function openEditProj(id){const p=state.projects.find(p=>p.id===id);if(!p)return;document.getElementById('mp-title').textContent='Rediger projekt';document.getElementById('mp-id').value=id;document.getElementById('mp-name').value=p.name||'';document.getElementById('mp-client').value=p.client||'';document.getElementById('mp-status').value=p.status||'active';document.getElementById('mp-budget').value=p.budget||'';document.getElementById('mp-dead').value=p.deadline||'';document.getElementById('mp-desc').value=p.description||'';openOv('proj');}
+function openNewProj(){['mp-id','mp-name','mp-client','mp-budget','mp-dead','mp-desc','mp-address'].forEach(id=>document.getElementById(id).value='');document.getElementById('mp-title').textContent='Nyt projekt';document.getElementById('mp-status').value='active';openOv('proj');}
+function openEditProj(id){const p=state.projects.find(p=>p.id===id);if(!p)return;document.getElementById('mp-title').textContent='Rediger projekt';document.getElementById('mp-id').value=id;document.getElementById('mp-name').value=p.name||'';document.getElementById('mp-client').value=p.client||'';document.getElementById('mp-status').value=p.status||'active';document.getElementById('mp-budget').value=p.budget||'';document.getElementById('mp-dead').value=p.deadline||'';document.getElementById('mp-desc').value=p.description||'';document.getElementById('mp-address').value=p.address||'';openOv('proj');}
 function deleteProj(id){if(!confirm('Slet projekt og al tilknyttet data?'))return;const tasks=state.tasks.filter(t=>t.projectId===id);const ctrs=state.contracts.filter(c=>c.projectId===id);state.tasks=state.tasks.filter(t=>t.projectId!==id);state.bids=state.bids.filter(b=>!tasks.some(t=>t.id===b.taskId));state.contractLines=state.contractLines.filter(l=>!ctrs.some(c=>c.id===l.contractId));state.contracts=state.contracts.filter(c=>c.projectId!==id);state.projects=state.projects.filter(p=>p.id!==id);sv();nav('projekter');}
-function saveProj(){const id=document.getElementById('mp-id').value;const name=document.getElementById('mp-name').value.trim();if(!name){alert('Projektnavn påkrævet');return;}const ex=id?state.projects.find(p=>p.id===id):null;const data={id:id||genId(),num:ex?ex.num:nextProjNum(),name,client:document.getElementById('mp-client').value.trim(),status:document.getElementById('mp-status').value,budget:parseFloat(document.getElementById('mp-budget').value)||0,deadline:document.getElementById('mp-dead').value,description:document.getElementById('mp-desc').value.trim(),createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.projects.findIndex(p=>p.id===id);if(i>=0)state.projects[i]=data;}else state.projects.push(data);sv();closeOv('proj');renderProj();}
+function saveProj(){const id=document.getElementById('mp-id').value;const name=document.getElementById('mp-name').value.trim();if(!name){alert('Projektnavn påkrævet');return;}const ex=id?state.projects.find(p=>p.id===id):null;const data={id:id||genId(),num:ex?ex.num:nextProjNum(),name,client:document.getElementById('mp-client').value.trim(),address:document.getElementById('mp-address').value.trim(),status:document.getElementById('mp-status').value,budget:parseFloat(document.getElementById('mp-budget').value)||0,deadline:document.getElementById('mp-dead').value,description:document.getElementById('mp-desc').value.trim(),createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.projects.findIndex(p=>p.id===id);if(i>=0)state.projects[i]=data;}else state.projects.push(data);sv();closeOv('proj');renderProj();}
 
 function openNewTask(pid){['mt-id','mt-name','mt-desc','mt-unit','mt-est','mt-qty'].forEach(id=>document.getElementById(id).value='');document.getElementById('mt-title').textContent='Tilføj opgave';document.getElementById('mt-projid').value=pid;openOv('task');}
 function openEditTask(id){const t=state.tasks.find(t=>t.id===id);if(!t)return;document.getElementById('mt-title').textContent='Rediger opgave';document.getElementById('mt-id').value=id;document.getElementById('mt-projid').value=t.projectId;document.getElementById('mt-name').value=t.name||'';document.getElementById('mt-desc').value=t.description||'';document.getElementById('mt-est').value=t.estimatedAmount||'';document.getElementById('mt-unit').value=t.unit||'';document.getElementById('mt-qty').value=t.qty||'';openOv('task');}
@@ -1767,7 +2032,7 @@ function openNewCtr(){
 function openNewCtrFromBid(tid,bidId){const t=state.tasks.find(t=>t.id===tid)||{};const b=state.bids.find(b=>b.id===bidId)||{};const proj=state.projects.find(p=>p.id===t.projectId)||{};document.getElementById('mc-title').textContent='Opret kontrakt';document.getElementById('mc-id').value='';document.getElementById('mc-taskid').value=tid;document.getElementById('mc-bidid').value=bidId||'';document.getElementById('mc-name').value=(proj.name?proj.name+' – ':'')+t.name||'Ny kontrakt';document.getElementById('mc-stage').value='accepted';document.getElementById('mc-amount').value=b.amount||'';document.getElementById('mc-dead').value='';document.getElementById('mc-terms').value='';_fillCtrSelects(b.supplierId||'',t.projectId||'');openOv('ctr');}
 function openEditCtr(id){const c=state.contracts.find(c=>c.id===id);if(!c)return;document.getElementById('mc-title').textContent='Rediger kontrakt';document.getElementById('mc-id').value=id;document.getElementById('mc-taskid').value=c.taskId||'';document.getElementById('mc-bidid').value=c.bidId||'';document.getElementById('mc-name').value=c.name||'';document.getElementById('mc-stage').value=c.stage||'draft';document.getElementById('mc-amount').value=c.amount||'';document.getElementById('mc-dead').value=c.deadline||'';document.getElementById('mc-terms').value=c.terms||'';_fillCtrSelects(c.supplierId||'',c.projectId||'');openOv('ctr');}
 function delCtr(id){if(!confirm('Slet kontrakt?'))return;const c=state.contracts.find(x=>x.id===id);const backPage=c&&c.type==='rfq'?'rfq':'kontrakter';state.contractLines=state.contractLines.filter(l=>l.contractId!==id);state.contracts=state.contracts.filter(c=>c.id!==id);sv();nav(backPage);}
-function saveCtr(){const id=document.getElementById('mc-id').value;const name=document.getElementById('mc-name').value.trim();if(!name){alert('Kontraktnavn påkrævet');return;}const tid=document.getElementById('mc-taskid').value;const bidId=document.getElementById('mc-bidid').value;const task=state.tasks.find(t=>t.id===tid);const bid=state.bids.find(b=>b.id===bidId);const ex=id?state.contracts.find(c=>c.id===id):null;const supId=document.getElementById('mc-sup').value||(bid?bid.supplierId:'')|| (ex?ex.supplierId:'');const projId=document.getElementById('mc-proj-sel').value||(task?task.projectId:'')|| (ex?ex.projectId:'');if(!supId){alert('Leverandør påkrævet');return;}const data={id:id||genId(),num:ex?ex.num:nextCtrNum(),name,type:ex?ex.type||'contract':'contract',taskId:tid||null,bidId:bidId||null,supplierId:supId,projectId:projId||null,stage:document.getElementById('mc-stage').value,amount:parseFloat(document.getElementById('mc-amount').value)||0,deadline:document.getElementById('mc-dead').value,terms:document.getElementById('mc-terms').value.trim(),documents:ex?ex.documents||[]:[],stageDates:ex?ex.stageDates||{}:{},linkSentAt:ex?ex.linkSentAt||null:null,createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.contracts.findIndex(c=>c.id===id);if(i>=0)state.contracts[i]=data;}else state.contracts.push(data);sv();closeOv('ctr');if(tid)showTaskDetail(tid,_taskProjId);else showContractDetail(data.id,'kontrakter');}
+function saveCtr(){const id=document.getElementById('mc-id').value;const name=document.getElementById('mc-name').value.trim();if(!name){alert('Kontraktnavn påkrævet');return;}const tid=document.getElementById('mc-taskid').value;const bidId=document.getElementById('mc-bidid').value;const task=state.tasks.find(t=>t.id===tid);const bid=state.bids.find(b=>b.id===bidId);const ex=id?state.contracts.find(c=>c.id===id):null;const supId=document.getElementById('mc-sup').value||(bid?bid.supplierId:'')|| (ex?ex.supplierId:'');const projId=document.getElementById('mc-proj-sel').value||(task?task.projectId:'')|| (ex?ex.projectId:'');if(!supId){alert('Leverandør påkrævet');return;}const data={id:id||genId(),num:ex?ex.num:nextCtrNum(),name,type:ex?ex.type||'contract':'contract',taskId:tid||null,bidId:bidId||null,supplierId:supId,projectId:projId||null,stage:document.getElementById('mc-stage').value,amount:parseFloat(document.getElementById('mc-amount').value)||0,deadline:document.getElementById('mc-dead').value,terms:document.getElementById('mc-terms').value.trim(),documents:ex?ex.documents||[]:[],stageDates:ex?ex.stageDates||{}:{},linkSentAt:ex?ex.linkSentAt||null:null,contractType:ex?ex.contractType||'fixed':'fixed',paymentTermsDays:ex?ex.paymentTermsDays||30:30,bidDeadline:ex?ex.bidDeadline||'':'',guaranteeMonths:ex?ex.guaranteeMonths!=null?ex.guaranteeMonths:12:12,milestones:ex?ex.milestones||[]:[], deliveryAddress:ex?ex.deliveryAddress||'':'',createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.contracts.findIndex(c=>c.id===id);if(i>=0)state.contracts[i]=data;}else state.contracts.push(data);sv();closeOv('ctr');if(tid)showTaskDetail(tid,_taskProjId);else showContractDetail(data.id,'kontrakter');}
 
 function openNewDoc(cid){document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value='';['dd-name','dd-url','dd-sdate'].forEach(id=>document.getElementById(id).value='');document.getElementById('dd-tmpl').value='';document.getElementById('dd-status').value='template';openOv('doc');}
 function openEditDoc(cid,did){const c=state.contracts.find(c=>c.id===cid);if(!c)return;const d=(c.documents||[]).find(d=>d.id===did);if(!d)return;document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value=did;document.getElementById('dd-tmpl').value=d.templateKey||'';document.getElementById('dd-name').value=d.name||'';document.getElementById('dd-status').value=d.status||'template';document.getElementById('dd-url').value=d.signedUrl||'';document.getElementById('dd-sdate').value=d.signedDate||'';openOv('doc');}
