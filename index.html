@@ -1440,15 +1440,13 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
   }).join(`<div style="flex:1;height:2px;background:#e2e8f0;margin-top:13px;align-self:flex-start"></div>`);
 
   // ── documents (contract-specific) ──
-  // Build templateKey→file_url map from uploaded templates
+  // Build templateKey→file_url map so template-keyed docs without a signedUrl still get a link
   const tmplKeyUrl={};
   (tmpls||[]).forEach(t=>{if(!t.file_url||!t.file_name)return;Object.keys(TMPL).forEach(k=>{if(t.file_name===TMPL[k].file)tmplKeyUrl[k]=t.file_url;});});
-  const usedTmplUrls=new Set();
   const docRows=docs.map(d=>{
     let href=d.signedUrl||d.url||d.file||'';
     if(!href&&d.templateKey&&tmplKeyUrl[d.templateKey])href=tmplKeyUrl[d.templateKey];
     if(!href)return null;
-    usedTmplUrls.add(href);
     const ext=(href.split('.').pop()||'').toLowerCase().split('?')[0];
     const icon={pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',png:'🖼',jpg:'🖼',jpeg:'🖼'}[ext]||'📎';
     return`<a href="${href}" target="_blank" rel="noopener" download style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;text-decoration:none;transition:background .15s" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#f8fafc'">
@@ -1458,8 +1456,8 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
     </a>`;
   }).filter(Boolean).join('');
 
-  // ── templates (exclude docs already shown above) ──
-  const tmplRows=(tmpls||[]).filter(t=>t.file_url&&!usedTmplUrls.has(t.file_url)).map(t=>{
+  // ── templates — show ALL uploaded templates unconditionally ──
+  const tmplRows=(tmpls||[]).filter(t=>t.file_url).map(t=>{
     const ext=(t.file_name||'').split('.').pop().toLowerCase();
     const icon={pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',png:'🖼',jpg:'🖼'}[ext]||'📎';
     const sz=t.file_size>0?` · ${t.file_size>1048576?(t.file_size/1048576).toFixed(1)+' MB':(Math.round(t.file_size/1024)||1)+' KB'}`:'';
