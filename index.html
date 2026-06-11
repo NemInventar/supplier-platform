@@ -1092,7 +1092,7 @@ function renderPortalHTML(token,c,lines,sup,prj){
       <th style="padding:10px 14px;text-align:left;width:180px;color:#475569">Note</th>
     </tr></thead>
     <tbody>${lines.map((l,i)=>`<tr data-line-id="${l.id}" style="border-bottom:1px solid #f1f5f9${i%2?';background:#fafafa':''}">
-      <td style="padding:10px 14px"><div style="font-weight:600;color:#0f172a">${esc(l.name)}</div>${l.description?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">${esc(l.description)}</div>`:''}${l.est_unit_price?`<div style="font-size:11px;color:#64748b;margin-top:2px">Estimat: ${Number(l.est_unit_price).toLocaleString('da-DK')} kr/enhed</div>`:''}</td>
+      <td style="padding:10px 14px"><div style="font-weight:600;color:#0f172a">${esc(l.name)}</div>${l.description?`<div style="font-size:12px;color:#475569;margin-top:3px;white-space:pre-wrap">${esc(l.description)}</div>`:''}</td>
       <td style="padding:10px 14px;text-align:right;color:#475569">${l.qty||''}</td>
       <td style="padding:10px 14px;color:#475569">${esc(l.unit||'')}</td>
       <td style="padding:10px 14px"><input class="price-input" type="number" min="0" step="0.01" value="${l.supplier_price!=null?l.supplier_price:''}" placeholder="0.00" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 9px;font-size:13px;text-align:right;outline:none" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'"></td>
@@ -1162,10 +1162,10 @@ async function submitSupplierPrices(token){
 }
 
 // ── CLM WIZARD ──
-let _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'tasks',_erpItems:[]};
+let _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[]};
 
 function openCtrWizard(){
-  _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'tasks',_erpItems:[]};
+  _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[]};
   wizRender();
   openOv('wiz');
 }
@@ -1218,9 +1218,8 @@ function wizRender(){
       <input class="fi" id="wiz-name" value="${esc(_wiz.contractName)}" oninput="_wiz.contractName=this.value">
     </div>
     <div style="display:flex;gap:6px;margin-bottom:12px">
-      <button class="btn btn-sm" id="wbtn-tasks" onclick="wizSetSrc('tasks')" style="background:${_wiz._src==='tasks'?'#2563eb':'#f1f5f9'};color:${_wiz._src==='tasks'?'#fff':'#475569'};border:1px solid #e2e8f0">Opgaver (${tasks.length})</button>
-      <button class="btn btn-sm" id="wbtn-prods" onclick="wizSetSrc('prods')" style="background:${_wiz._src==='prods'?'#2563eb':'#f1f5f9'};color:${_wiz._src==='prods'?'#fff':'#475569'};border:1px solid #e2e8f0">ERP Produkter</button>
-      <button class="btn btn-sm" id="wbtn-mats" onclick="wizSetSrc('mats')" style="background:${_wiz._src==='mats'?'#2563eb':'#f1f5f9'};color:${_wiz._src==='mats'?'#fff':'#475569'};border:1px solid #e2e8f0">ERP Materialer</button>
+      <button class="btn btn-sm" id="wbtn-quotes" onclick="wizSetSrc('quotes')" style="background:${_wiz._src==='quotes'?'#2563eb':'#f1f5f9'};color:${_wiz._src==='quotes'?'#fff':'#475569'};border:1px solid #e2e8f0">ERP Tilbudslinjer</button>
+      <button class="btn btn-sm" id="wbtn-tasks" onclick="wizSetSrc('tasks')" style="background:${_wiz._src==='tasks'?'#2563eb':'#f1f5f9'};color:${_wiz._src==='tasks'?'#fff':'#475569'};border:1px solid #e2e8f0">Platformopgaver (${tasks.length})</button>
     </div>
     <div id="wiz-items-list" style="max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px">
       ${wizItemsHtml(_wiz._src==='tasks'?tasks:_wiz._erpItems)}
@@ -1244,7 +1243,8 @@ function wizItemsHtml(items){
         <div style="font-size:13px;font-weight:600;color:#0f172a">${nm}</div>
         ${it.description?`<div style="font-size:11px;color:#94a3b8;margin-top:1px">${dsc}</div>`:''}
         ${qty||it.unit?`<div style="font-size:11px;color:#64748b;margin-top:1px">${qty?qty+' ':''}${un}</div>`:''}
-        ${ep?`<div style="font-size:11px;color:#64748b">Estimeret pris: ${Number(ep).toLocaleString('da-DK')} kr/enhed</div>`:''}
+        ${ep?`<div style="font-size:11px;color:#7c3aed;font-weight:600;margin-top:2px">🔒 Vores salgspris: ${Number(ep).toLocaleString('da-DK')} kr/enhed</div>`:''}
+        ${it._quote?`<div style="font-size:10px;color:#94a3b8;margin-top:2px">📋 ${esc(it._quote)}</div>`:''}
       </div>
       ${sel?`<input type="number" value="${si.estUnitPrice||''}" placeholder="Estimat kr" onchange="wizSetPrice('${id}',this.value)" style="width:110px;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:12px;flex-shrink:0" min="0">`:'' }
     </div>`;
@@ -1258,14 +1258,16 @@ async function wizLoadItems(src){
   try{
     const pid=ID.toUuid.get(_wiz.projectId);
     let items=[];
-    if(src==='prods'&&pid){
-      const{data,error}=await sb.from('project_products_2026_01_15_12_49').select('id,name,description,unit,qty').eq('project_id',pid);
-      if(error)throw error;
-      items=(data||[]).map(r=>({id:r.id,name:r.name||'',description:r.description||'',unit:r.unit||'',qty:r.qty||'',est_unit_price:0}));
-    }else if(src==='mats'&&pid){
-      const{data,error}=await sb.from('project_materials_2026_01_15_06_45').select('id,name,description,unit,qty,unit_price').eq('project_id',pid);
-      if(error)throw error;
-      items=(data||[]).map(r=>({id:r.id,name:r.name||'',description:r.description||'',unit:r.unit||'',qty:r.qty||'',est_unit_price:r.unit_price||0}));
+    if(src==='quotes'&&pid){
+      const{data:quotes,error:qe}=await sb.from('project_quotes_2026_01_16_23_00').select('id,quote_number,title').eq('project_id',pid).in('status',['accepted','draft']);
+      if(qe)throw qe;
+      const qids=(quotes||[]).map(q=>q.id);
+      if(qids.length){
+        const{data:lines,error:le}=await sb.from('project_quote_lines_2026_01_16_23_00').select('id,project_quote_id,title,description,quantity,unit,target_unit_price,technical_spec,sort_order').in('project_quote_id',qids).or('archived.is.null,archived.eq.false').order('sort_order');
+        if(le)throw le;
+        const qmap=new Map((quotes||[]).map(q=>[q.id,q]));
+        items=(lines||[]).map(l=>({id:l.id,name:l.title||'',description:[l.description,l.technical_spec].filter(Boolean).join('\n')||'',unit:l.unit||'',qty:l.quantity||'',est_unit_price:parseFloat(l.target_unit_price)||0,_quote:(qmap.get(l.project_quote_id)?.quote_number||'')+' · '+(qmap.get(l.project_quote_id)?.title||'')}));
+      }
     }
     _wiz._erpItems=items;
     list.innerHTML=wizItemsHtml(items);
@@ -1274,7 +1276,7 @@ async function wizLoadItems(src){
 
 function wizSetSrc(src){
   _wiz._src=src;
-  ['tasks','prods','mats'].forEach(s=>{const b=document.getElementById('wbtn-'+s);if(b){b.style.background=s===src?'#2563eb':'#f1f5f9';b.style.color=s===src?'#fff':'#475569';}});
+  ['tasks','quotes'].forEach(s=>{const b=document.getElementById('wbtn-'+s);if(b){b.style.background=s===src?'#2563eb':'#f1f5f9';b.style.color=s===src?'#fff':'#475569';}});
   if(src==='tasks'){
     const tasks=state.tasks.filter(t=>t.projectId===_wiz.projectId);
     const list=document.getElementById('wiz-items-list');
