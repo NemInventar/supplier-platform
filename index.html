@@ -468,7 +468,7 @@ async function initFromSupabase(){
       sb.from('sp_tasks').select('*'),
       sb.from('sp_bids').select('*'),
       sb.from('sp_contracts').select('*'),
-      sb.from('companies_2026_04_27').select('*').eq('is_supplier',true),
+      sb.from('companies_2026_04_27').select('*').eq('is_contract_supplier',true),
       sb.from('sp_disputes').select('*'),
       sb.from('sp_contract_lines').select('*'),
       sb.from('sp_settings').select('*').eq('key','templateUrls').maybeSingle()
@@ -497,7 +497,7 @@ async function initFromSupabase(){
 }
 
 const toProjRow=p=>({app_id:p.id,project_number:p.num||'',name:p.name,customer:p.client||'',status:p.status||'active',budget_amount:p.budget||0,deadline:p.deadline||null,description:p.description||'',created_at:p.createdAt});
-const toSupRow=s=>({app_id:s.id,name:s.name,country:s.country||'',cvr:s.cvr||'',tags:s.cat?[s.cat]:[],default_contact_name:s.cname||'',default_contact_email:s.email||'',default_contact_phone:s.phone||'',notes:s.notes||'',is_supplier:true});
+const toSupRow=s=>({app_id:s.id,name:s.name,country:s.country||'',cvr:s.cvr||'',tags:s.cat?[s.cat]:[],default_contact_name:s.cname||'',default_contact_email:s.email||'',default_contact_phone:s.phone||'',notes:s.notes||'',is_supplier:false,is_contract_supplier:true});
 const toTaskRow=t=>({app_id:t.id,num:t.num||'',project_id:ID.toUuid.get(t.projectId)||null,name:t.name,description:t.description||'',estimated_amount:t.estimatedAmount||0,unit:t.unit||'',qty:t.qty||'',created_at:t.createdAt});
 const toBidRow=b=>({app_id:b.id,task_id:ID.toUuid.get(b.taskId)||null,supplier_id:ID.toUuid.get(b.supplierId)||null,amount:b.amount||0,note:b.note||'',submitted_at:b.submittedAt,status:b.status||'pending'});
 const toCtrRow=c=>({app_id:c.id,num:c.num||'',name:c.name,task_id:ID.toUuid.get(c.taskId)||null,bid_id:ID.toUuid.get(c.bidId)||null,supplier_id:ID.toUuid.get(c.supplierId)||null,project_id:ID.toUuid.get(c.projectId)||null,stage:c.stage||'invited',amount:c.amount||0,deadline:c.deadline||null,terms:c.terms||'',documents:c.documents||[],stage_dates:c.stageDates||{},link_sent_at:c.linkSentAt||null,created_at:c.createdAt});
