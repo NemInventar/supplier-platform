@@ -464,7 +464,7 @@ function appOf(uuid){return uuid==null?null:(ID.toApp.get(uuid)||null);}
 async function initFromSupabase(){
   try{
     const[proj,tasks,bids,ctr,sup,disp,lines,sett]=await Promise.all([
-      sb.from('projects_2026_01_15_06_45').select('*').or('status.eq.active,status.is.null'),
+      sb.from('projects_2026_01_15_06_45').select('*').eq('status','active'),
       sb.from('sp_tasks').select('*'),
       sb.from('sp_bids').select('*'),
       sb.from('sp_contracts').select('*'),
