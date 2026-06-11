@@ -1230,7 +1230,13 @@ function saveTmplUrls(){if(!state.templateUrls)state.templateUrls={};Object.keys
 // ── SUPPLIER LINK ──
 let _curLinkCid=null;
 async function buildSupLink(cid){
-  const cUuid=ID.toUuid.get(cid);if(!cUuid)return'';
+  let cUuid=ID.toUuid.get(cid);
+  if(!cUuid){
+    // UUID not yet registered — force a sync and retry once
+    await syncToSupabase();
+    cUuid=ID.toUuid.get(cid);
+  }
+  if(!cUuid)throw new Error('Kontrakten er ikke gemt i databasen endnu. Vent et øjeblik og prøv igen.');
   const{data,error}=await sb.from('sp_contract_tokens').insert({contract_id:cUuid}).select('token').single();
   if(error)throw error;
   return window.location.origin+window.location.pathname+'#p/'+data.token;
