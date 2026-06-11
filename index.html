@@ -1303,7 +1303,7 @@ function wizRender(){
         </div>
       </div>`).join('')||'<div style="color:#94a3b8;text-align:center;padding:28px;font-size:13px">Ingen aktive projekter</div>'}
     </div>`;
-  }else{
+  }else if(s===3){
     const sup=state.suppliers.find(x=>x.id===_wiz.supplierId);
     const proj=state.projects.find(x=>x.id===_wiz.projectId);
     const tasks=state.tasks.filter(t=>t.projectId===_wiz.projectId);
