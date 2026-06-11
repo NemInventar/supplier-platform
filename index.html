@@ -378,6 +378,11 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
   <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('suplink')">Luk</button><button class="btn btn-green" onclick="markCtrSent()">✓ Markér som sendt</button></div>
 </div></div>
 
+<script type="module">
+import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
+window.sb=createClient('https://guhbrpektblabndqttgp.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1aGJycGVrdGJsYWJuZHF0dGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MzgyOTEsImV4cCI6MjA4NDAxNDI5MX0.k2VbP5r3vCCJOsgefavapMFchC1fBerqoUKGDpe0E-M');
+window.dispatchEvent(new Event('sb-ready'));
+</script>
 <script>
 const SK='neminventar_sup_v3',DV=1;
 const EMPTY={_version:1,projects:[],tasks:[],bids:[],contracts:[],suppliers:[],disputes:[],templateUrls:{}};
@@ -414,11 +419,117 @@ const DOC_ST={template:'Skabelon',sent:'Sendt',signed:'Underskrevet'};
 const DOC_CLS={template:'b-gray',sent:'b-yellow',signed:'b-green'};
 
 function ls(){try{const s=localStorage.getItem(SK);if(s){const p=JSON.parse(s);if((p._version||0)>=DV)return p;}}catch(e){}return JSON.parse(JSON.stringify(EMPTY));}
-function sv(){localStorage.setItem(SK,JSON.stringify(state));}
+function sv(){localStorage.setItem(SK,JSON.stringify(state));scheduleSync();}
 function resetAll(){state=JSON.parse(JSON.stringify(EMPTY));sv();nav(_page);}
-let state=ls();
+let state=JSON.parse(JSON.stringify(EMPTY));
 
 function genId(){return '_'+Math.random().toString(36).substr(2,9);}
+
+// ── SUPABASE SYNC ──
+const ID={toApp:new Map(),toUuid:new Map()};
+function regId(uuid,appId){if(uuid&&appId){ID.toApp.set(uuid,appId);ID.toUuid.set(appId,uuid);}}
+function appOf(uuid){return uuid==null?null:(ID.toApp.get(uuid)||null);}
+
+async function initFromSupabase(){
+  try{
+    const[proj,tasks,bids,ctr,sup,disp,sett]=await Promise.all([
+      sb.from('projects_2026_01_15_06_45').select('*'),
+      sb.from('sp_tasks').select('*'),
+      sb.from('sp_bids').select('*'),
+      sb.from('sp_contracts').select('*'),
+      sb.from('companies_2026_04_27').select('*').eq('is_supplier',true),
+      sb.from('sp_disputes').select('*'),
+      sb.from('sp_settings').select('*').eq('key','templateUrls').maybeSingle()
+    ]);
+    for(const r of[proj,tasks,bids,ctr,sup,disp])if(r.error)throw r.error;
+    const reg=rows=>(rows||[]).forEach(x=>regId(x.id,x.app_id||x.id));
+    reg(proj.data);reg(tasks.data);reg(bids.data);reg(ctr.data);reg(sup.data);reg(disp.data);
+    state={
+      _version:1,
+      projects:(proj.data||[]).map(r=>({id:r.app_id||r.id,num:r.project_number||'',name:r.name,client:r.customer||'',status:r.status||'active',budget:r.budget_amount||0,deadline:r.deadline||'',description:r.description||'',createdAt:r.created_at})),
+      tasks:(tasks.data||[]).map(r=>({id:r.app_id||r.id,num:r.num||'',projectId:appOf(r.project_id),name:r.name,description:r.description||'',estimatedAmount:r.estimated_amount||0,unit:r.unit||'',qty:r.qty||'',createdAt:r.created_at})),
+      bids:(bids.data||[]).map(r=>({id:r.app_id||r.id,taskId:appOf(r.task_id),supplierId:appOf(r.supplier_id),amount:r.amount||0,note:r.note||'',submittedAt:r.submitted_at,status:r.status||'pending'})),
+      contracts:(ctr.data||[]).map(r=>({id:r.app_id||r.id,num:r.num||'',name:r.name,taskId:appOf(r.task_id),bidId:appOf(r.bid_id),supplierId:appOf(r.supplier_id),projectId:appOf(r.project_id),stage:r.stage||'invited',amount:r.amount||0,deadline:r.deadline||'',terms:r.terms||'',documents:r.documents||[],stageDates:r.stage_dates||{},linkSentAt:r.link_sent_at||null,createdAt:r.created_at})),
+      suppliers:(sup.data||[]).map(r=>({id:r.app_id||r.id,name:r.name,country:r.country||'',cvr:r.cvr||'',cat:(Array.isArray(r.tags)&&r.tags[0])||'andet',cname:r.default_contact_name||'',email:r.default_contact_email||'',phone:r.default_contact_phone||'',notes:r.notes||''})),
+      disputes:(disp.data||[]).map(r=>({id:r.app_id||r.id,title:r.title,supplierId:appOf(r.supplier_id),contractId:appOf(r.contract_id),severity:r.severity||'medium',status:r.status||'open',scope:r.scope||'other',description:r.description||'',createdAt:r.created_at,timeline:r.timeline||[]})),
+      templateUrls:(sett&&sett.data&&sett.data.value)||{}
+    };
+    _synced=JSON.parse(JSON.stringify(state));
+    hideOfflineBanner();
+  }catch(e){
+    console.error('Supabase load fejlede',e);
+    state=ls();
+    showOfflineBanner();
+  }
+}
+
+const toProjRow=p=>({app_id:p.id,project_number:p.num||'',name:p.name,customer:p.client||'',status:p.status||'active',budget_amount:p.budget||0,deadline:p.deadline||null,description:p.description||'',created_at:p.createdAt});
+const toSupRow=s=>({app_id:s.id,name:s.name,country:s.country||'',cvr:s.cvr||'',tags:s.cat?[s.cat]:[],default_contact_name:s.cname||'',default_contact_email:s.email||'',default_contact_phone:s.phone||'',notes:s.notes||'',is_supplier:true});
+const toTaskRow=t=>({app_id:t.id,num:t.num||'',project_id:ID.toUuid.get(t.projectId)||null,name:t.name,description:t.description||'',estimated_amount:t.estimatedAmount||0,unit:t.unit||'',qty:t.qty||'',created_at:t.createdAt});
+const toBidRow=b=>({app_id:b.id,task_id:ID.toUuid.get(b.taskId)||null,supplier_id:ID.toUuid.get(b.supplierId)||null,amount:b.amount||0,note:b.note||'',submitted_at:b.submittedAt,status:b.status||'pending'});
+const toCtrRow=c=>({app_id:c.id,num:c.num||'',name:c.name,task_id:ID.toUuid.get(c.taskId)||null,bid_id:ID.toUuid.get(c.bidId)||null,supplier_id:ID.toUuid.get(c.supplierId)||null,project_id:ID.toUuid.get(c.projectId)||null,stage:c.stage||'invited',amount:c.amount||0,deadline:c.deadline||null,terms:c.terms||'',documents:c.documents||[],stage_dates:c.stageDates||{},link_sent_at:c.linkSentAt||null,created_at:c.createdAt});
+const toDispRow=d=>({app_id:d.id,title:d.title,supplier_id:ID.toUuid.get(d.supplierId)||null,contract_id:ID.toUuid.get(d.contractId)||null,severity:d.severity||'medium',status:d.status||'open',scope:d.scope||'other',description:d.description||'',created_at:d.createdAt,timeline:d.timeline||[]});
+
+let _synced=null,_syncTimer=null,_syncing=false;
+function scheduleSync(){if(!window.sb)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(syncToSupabase,800);}
+
+async function syncToSupabase(){
+  if(!window.sb||_syncing){if(_syncing)scheduleSync();return;}
+  _syncing=true;
+  const snap=JSON.parse(JSON.stringify(state));
+  try{
+    await syncColl('projects',snap.projects,toProjRow,'projects_2026_01_15_06_45');
+    await syncColl('suppliers',snap.suppliers,toSupRow,'companies_2026_04_27');
+    await syncColl('tasks',snap.tasks,toTaskRow,'sp_tasks');
+    await syncColl('bids',snap.bids,toBidRow,'sp_bids');
+    await syncColl('contracts',snap.contracts,toCtrRow,'sp_contracts');
+    await syncColl('disputes',snap.disputes,toDispRow,'sp_disputes');
+    await syncSettings(snap.templateUrls);
+    _synced=snap;
+    hideOfflineBanner();
+  }catch(e){console.error('Supabase sync fejlede',e);showOfflineBanner();}
+  finally{_syncing=false;}
+}
+
+async function syncColl(key,rows,mapFn,table){
+  const prev=(_synced&&_synced[key])||[];
+  const prevMap=new Map(prev.map(r=>[r.id,JSON.stringify(r)]));
+  const curIds=new Set(rows.map(r=>r.id));
+  const changed=rows.filter(r=>prevMap.get(r.id)!==JSON.stringify(r));
+  if(changed.length){
+    const{error}=await sb.from(table).upsert(changed.map(mapFn),{onConflict:'app_id'});
+    if(error)throw error;
+    const{data}=await sb.from(table).select('id,app_id').in('app_id',changed.map(r=>r.id));
+    (data||[]).forEach(x=>regId(x.id,x.app_id));
+  }
+  const removed=prev.filter(r=>!curIds.has(r.id)).map(r=>r.id);
+  if(removed.length){const{error}=await sb.from(table).delete().in('app_id',removed);if(error)throw error;}
+}
+
+async function syncSettings(templateUrls){
+  const{error}=await sb.from('sp_settings').upsert({key:'templateUrls',value:templateUrls||{},updated_at:new Date().toISOString()},{onConflict:'key'});
+  if(error)throw error;
+}
+
+async function migrateLocalToSupabaseIfNeeded(){
+  if(localStorage.getItem('neminventar_migrated_v1')==='done')return;
+  const local=ls();
+  const hasLocal=local.projects.length||local.suppliers.length||local.contracts.length||local.disputes.length;
+  if(!hasLocal){localStorage.setItem('neminventar_migrated_v1','done');return;}
+  try{
+    const{count}=await sb.from('sp_contracts').select('*',{count:'exact',head:true});
+    if((count||0)===0){
+      state=local;
+      _synced={projects:[],suppliers:[],tasks:[],bids:[],contracts:[],disputes:[]};
+      await syncToSupabase();
+    }
+    localStorage.setItem('neminventar_migrated_v1','done');
+  }catch(e){console.error('localStorage migration fejlede',e);}
+}
+
+function showOfflineBanner(){let b=document.getElementById('offline-banner');if(!b){b=document.createElement('div');b.id='offline-banner';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;text-align:center;padding:6px;font-size:12px;font-weight:600';b.textContent='⚠ Offline – ændringer gemmes lokalt og synkroniseres automatisk';document.body.prepend(b);}b.style.display='block';}
+function hideOfflineBanner(){const b=document.getElementById('offline-banner');if(b)b.style.display='none';}
+window.addEventListener('online',()=>scheduleSync());
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmtD(d){if(!d)return'–';try{return new Date(d+'T12:00').toLocaleDateString('da-DK',{day:'numeric',month:'short',year:'numeric'});}catch(e){return d;}}
 function fmtM(n){if(!n&&n!==0)return'–';const v=Number(n);if(isNaN(v))return'–';if(v>=1e6)return(v/1e6).toFixed(2).replace('.',',')+' mio kr.';return v.toLocaleString('da-DK')+' kr.';}
@@ -966,14 +1077,16 @@ function saveDisp(){const id=document.getElementById('md-id').value;const title=
 function openDNote(id){document.getElementById('dn-id').value=id;document.getElementById('dn-text').value='';document.getElementById('dn-stat').value='';openOv('dnote');}
 function saveDNote(){const id=document.getElementById('dn-id').value;const text=document.getElementById('dn-text').value.trim();if(!text){alert('Note påkrævet');return;}const d=state.disputes.find(d=>d.id===id);if(!d)return;if(!d.timeline)d.timeline=[];const ns=document.getElementById('dn-stat').value;const note={date:new Date().toISOString().split('T')[0],note:text};if(ns){note.statusChange=ns;d.status=ns;}d.timeline.push(note);sv();closeOv('dnote');updateBadge();showDispDetail(id);}
 
-(function(){
+window.addEventListener('sb-ready',async function(){
   const hash=window.location.hash;
   if(hash.startsWith('#supplier/')){
     try{renderSupplierView(JSON.parse(decodeURIComponent(escape(atob(hash.slice('#supplier/'.length))))));return;}catch(e){}
   }
   document.getElementById('admin-app').style.display='block';
+  await migrateLocalToSupabaseIfNeeded();
+  await initFromSupabase();
   renderProj();updateBadge();
-})();
+});
 </script>
 </body>
 </html>
