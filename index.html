@@ -1120,9 +1120,11 @@ async function saveTemplate(){
   try{
     let fileUrl='',fileName='',fileSize=0,fileType='';
     if(file){
-      const ext=file.name.split('.').pop();
+      const ext=(file.name.split('.').pop()||'').toLowerCase();
+      const MIME_FALLBACK={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg'};
+      const contentType=file.type||MIME_FALLBACK[ext]||'application/octet-stream';
       const path='templates/'+genId()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      const{data:up,error:ue}=await window.sb.storage.from('contract-docs').upload(path,file,{contentType:file.type,upsert:false});
+      const{data:up,error:ue}=await window.sb.storage.from('contract-docs').upload(path,file,{contentType,upsert:false});
       if(ue)throw ue;
       const{data:{publicUrl}}=window.sb.storage.from('contract-docs').getPublicUrl(path);
       fileUrl=publicUrl;fileName=file.name;fileSize=file.size;fileType=file.type;
