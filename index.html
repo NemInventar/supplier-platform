@@ -453,6 +453,14 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
   <div class="mhead"><div class="mtitle" id="le-title">Rediger opgave</div><button class="mclose" onclick="closeOv('line-edit')">✕</button></div>
   <div class="mbody" style="max-height:72vh;overflow-y:auto">
     <input type="hidden" id="le-id"><input type="hidden" id="le-cid">
+    <div id="le-erp-wrap" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.06em">📦 Vælg fra ERP</span>
+        <span style="font-size:10px;color:#64748b">Klik for at udfylde felterne automatisk</span>
+      </div>
+      <input id="le-erp-search" class="fi" style="margin-bottom:8px;font-size:13px" placeholder="Søg på produktnavn eller tilbud…" oninput="filterErpLines(this.value)">
+      <div id="le-erp-list" style="max-height:220px;overflow-y:auto;border-radius:6px"></div>
+    </div>
     <div class="fg"><label class="fl">Opgavenavn *</label><input class="fi" id="le-name" placeholder="fx. Produktion af skabe – type A"></div>
     <div class="fg"><label class="fl">Beskrivelse</label><textarea class="ft" id="le-desc" rows="3" placeholder="Detaljeret beskrivelse af hvad leverandøren skal levere"></textarea></div>
     <div class="frow">
@@ -1961,8 +1969,59 @@ function wizRemoveDoc(i){
   if(list)list.innerHTML=wizDocsHtml();
 }
 
+// ── ERP LINE PICKER ──
+let _erpLines=null,_leErpSourceId=null;
+async function loadErpLines(){
+  const listEl=document.getElementById('le-erp-list');
+  if(_erpLines){renderErpLines(document.getElementById('le-erp-search').value||'');return;}
+  listEl.innerHTML='<div style="color:#94a3b8;font-size:12px;padding:8px">Henter ERP-linjer…</div>';
+  try{
+    const{data:lines,error}=await window.sb.from('project_quote_lines_2026_01_16_23_00')
+      .select('id,title,description,quantity,unit,target_unit_price,technical_spec,project_quote_id')
+      .neq('archived',true).order('created_at',{ascending:false});
+    if(error)throw error;
+    const quoteIds=[...new Set((lines||[]).map(l=>l.project_quote_id).filter(Boolean))];
+    let quoteMap={};
+    if(quoteIds.length){
+      const{data:quotes}=await window.sb.from('project_quotes_2026_01_16_23_00').select('id,title').in('id',quoteIds);
+      (quotes||[]).forEach(q=>{quoteMap[q.id]=q.title;});
+    }
+    _erpLines=(lines||[]).map(l=>({...l,quoteTitle:quoteMap[l.project_quote_id]||''}));
+    renderErpLines('');
+  }catch(e){listEl.innerHTML='<div style="color:#ef4444;font-size:12px;padding:8px">Fejl: '+e.message+'</div>';}
+}
+function filterErpLines(val){renderErpLines(val);}
+function renderErpLines(filter){
+  const listEl=document.getElementById('le-erp-list');
+  if(!_erpLines||!listEl)return;
+  const q=(filter||'').toLowerCase();
+  const items=q?_erpLines.filter(l=>(l.title||'').toLowerCase().includes(q)||(l.quoteTitle||'').toLowerCase().includes(q)):_erpLines;
+  if(!items.length){listEl.innerHTML='<div style="color:#94a3b8;font-size:12px;padding:8px">Ingen resultater</div>';return;}
+  listEl.innerHTML=items.slice(0,50).map(l=>`<div onclick="pickErpLine('${l.id}')" data-eid="${l.id}" style="padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:8px" onmouseover="this.style.background='#dbeafe'" onmouseout="if(this.dataset.sel!='1')this.style.background=''">
+    <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.title||'')}</div>${l.quoteTitle?'<div style="font-size:11px;color:#64748b">'+esc(l.quoteTitle)+'</div>':''}</div>
+    <div style="text-align:right;white-space:nowrap;flex-shrink:0"><div style="font-size:12px;color:#475569">${l.quantity||''} ${esc(l.unit||'')}</div>${l.target_unit_price?'<div style="font-size:11px;color:#16a34a">'+Number(l.target_unit_price).toLocaleString('da-DK')+' kr</div>':''}</div>
+  </div>`).join('');
+}
+function pickErpLine(id){
+  const l=(_erpLines||[]).find(x=>x.id===id);if(!l)return;
+  document.getElementById('le-name').value=l.title||'';
+  document.getElementById('le-desc').value=l.description||'';
+  document.getElementById('le-qty').value=l.quantity||'';
+  document.getElementById('le-unit').value=l.unit||'';
+  if(l.target_unit_price)document.getElementById('le-est').value=l.target_unit_price;
+  if(l.technical_spec)document.getElementById('le-specs').value=l.technical_spec;
+  _leErpSourceId=id;
+  document.querySelectorAll('#le-erp-list [data-eid]').forEach(el=>{
+    el.dataset.sel=el.dataset.eid===id?'1':'';
+    el.style.background=el.dataset.eid===id?'#bfdbfe':'';
+  });
+  document.getElementById('le-name').focus();
+}
+
 // ── LINE EDIT ──
 function openLineEdit(lineId, contractId){
+  _leErpSourceId=null;
+  const erpWrap=document.getElementById('le-erp-wrap');
   if(lineId){
     const l=state.contractLines.find(x=>x.id===lineId);if(!l)return;
     document.getElementById('le-title').textContent='Rediger opgave';
@@ -1979,10 +2038,14 @@ function openLineEdit(lineId, contractId){
     document.getElementById('le-accept').value=l.acceptanceCriteria||'';
     document.getElementById('le-start').value=l.startDate||'';
     document.getElementById('le-end').value=l.endDate||'';
+    erpWrap.style.display='none';
   }else{
     document.getElementById('le-title').textContent='Tilføj opgave';
     ['le-id','le-name','le-desc','le-qty','le-unit','le-est','le-location','le-drawref','le-specs','le-accept','le-start','le-end'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('le-cid').value=contractId||'';
+    document.getElementById('le-erp-search').value='';
+    erpWrap.style.display='block';
+    loadErpLines();
   }
   openOv('line-edit');
 }
@@ -1994,7 +2057,8 @@ function saveLineEdit(){
   const data={
     id:lid||genId(),contractId:cid,
     sortOrder:lid?(state.contractLines.find(l=>l.id===lid)?.sortOrder||0):state.contractLines.filter(l=>l.contractId===cid).length,
-    sourceTable:'',sourceId:null,
+    sourceTable:_leErpSourceId?'quotes':(lid?(state.contractLines.find(l=>l.id===lid)?.sourceTable||''):''),
+    sourceId:_leErpSourceId||(lid?(state.contractLines.find(l=>l.id===lid)?.sourceId||null):null),
     name,description:document.getElementById('le-desc').value.trim(),
     qty:parseFloat(document.getElementById('le-qty').value)||0,
     unit:document.getElementById('le-unit').value.trim(),
