@@ -169,7 +169,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
 </div>
 
 <div id="page-kontrakter" class="page">
-  <div class="topbar"><div><div class="page-title">Kontrakter</div><div class="page-sub">CLM-overblik over alle kontrakter</div></div><button class="btn btn-primary" onclick="openNewCtr()">+ Ny kontrakt</button></div>
+  <div class="topbar"><div><div class="page-title">Kontrakter & RFQ</div><div class="page-sub">Udbud og kontraktforløb</div></div><button class="btn btn-primary" onclick="openNewCtr()">+ Ny RFQ</button></div>
   <div id="kontr-pipeline"></div>
 </div>
 
@@ -389,15 +389,32 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
   <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('suplink')">Luk</button><button class="btn btn-green" onclick="markCtrSent()">✓ Markér som sendt</button></div>
 </div></div>
 
+<div class="overlay" id="ov-accept-rfq">
+<div class="modal" style="max-width:480px">
+  <div class="mhead"><div class="mtitle">Gå videre til kontrakt</div><button class="mclose" onclick="closeOv('accept-rfq')">✕</button></div>
+  <div class="mbody">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#166534">✓ Leverandørens priser er modtaget. Udfyld kontraktoplysninger og gå videre til underskrift.</div>
+    <input type="hidden" id="ar-cid">
+    <div class="frow">
+      <div class="fg"><label class="fl">Aftalt beløb (DKK)</label><input class="fi" id="ar-amount" type="number" placeholder="0"></div>
+      <div class="fg"><label class="fl">Deadline</label><input class="fi" id="ar-dead" type="date"></div>
+    </div>
+    <div class="fg"><label class="fl">Aftalevilkår</label><textarea class="ft" id="ar-terms" placeholder="Betalingsbetingelser, leveringskrav, garantier..."></textarea></div>
+  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('accept-rfq')">Annuller</button><button class="btn btn-primary" onclick="saveAcceptRFQ()">Opret kontrakt →</button></div>
+</div></div>
+
 <div class="overlay" id="ov-wiz">
 <div class="modal" style="max-width:700px;width:92vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">
-  <div class="mhead"><div class="mtitle" id="wiz-title">Ny kontrakt</div><button class="mclose" onclick="closeOv('wiz')">✕</button></div>
+  <div class="mhead"><div class="mtitle" id="wiz-title">Ny RFQ</div><button class="mclose" onclick="closeOv('wiz')">✕</button></div>
   <div id="wiz-steps" style="display:flex;align-items:center;padding:16px 24px 0;border-bottom:1px solid var(--border)">
     <div class="wiz-stp" id="wstp-1"><div class="wiz-num">1</div><div class="wiz-lbl">Leverandør</div></div>
     <div class="wiz-line"></div>
     <div class="wiz-stp" id="wstp-2"><div class="wiz-num">2</div><div class="wiz-lbl">Projekt</div></div>
     <div class="wiz-line"></div>
     <div class="wiz-stp" id="wstp-3"><div class="wiz-num">3</div><div class="wiz-lbl">Leverancer</div></div>
+    <div class="wiz-line"></div>
+    <div class="wiz-stp" id="wstp-4"><div class="wiz-num">4</div><div class="wiz-lbl">Dokumenter</div></div>
   </div>
   <div id="wiz-body" style="overflow-y:auto;flex:1;padding:20px 24px"></div>
   <div class="mfooter">
@@ -818,7 +835,8 @@ function showContractDetail(cid,backTo){
           </div>
           <div style="font-size:12px;color:var(--muted)">${esc(sup.name||'–')}${proj?' · '+esc(proj.name):''}${c.amount?' · '+fmtM(c.amount):''}</div>
         </div>
-        <div style="display:flex;gap:7px">
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          ${['invited','received','accepted'].includes(c.stage)?`<button class="btn btn-primary btn-sm" onclick="acceptRFQ('${cid}')">✓ Gå videre til kontrakt</button>`:''}
           <button class="btn btn-green btn-sm" onclick="openSupLink('${cid}')">🔗 Send til leverandør</button>
           <button class="btn btn-ghost btn-sm" onclick="openEditCtr('${cid}')">Rediger</button>
           <button class="btn btn-danger btn-sm" onclick="delCtr('${cid}')">Slet</button>
@@ -850,6 +868,46 @@ function showContractDetail(cid,backTo){
         <div style="font-size:12.5px;color:var(--muted);line-height:1.65;white-space:pre-wrap">${esc(c.terms||'Ingen vilkår tilføjet')}</div>
       </div>
     </div>
+    ${(()=>{
+      const lines=state.contractLines.filter(l=>l.contractId===cid);
+      if(!lines.length)return'';
+      const anyPriced=lines.some(l=>l.supplierPrice!=null);
+      const rows=lines.map(l=>{
+        const ourTotal=l.estUnitPrice&&l.qty?l.estUnitPrice*l.qty:null;
+        const supTotal=l.supplierPrice!=null&&l.qty?l.supplierPrice*l.qty:null;
+        const margin=ourTotal&&supTotal?((ourTotal-supTotal)/ourTotal*100):null;
+        return`<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:9px 14px"><div style="font-size:13px;font-weight:500">${esc(l.name)}</div>${l.description?`<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:pre-wrap">${esc(l.description.length>120?l.description.slice(0,120)+'…':l.description)}</div>`:''}</td>
+          <td style="padding:9px 14px;text-align:right;color:var(--muted);font-size:12px">${l.qty||''} ${esc(l.unit||'')}</td>
+          <td style="padding:9px 14px;text-align:right;color:#7c3aed;font-weight:600;font-size:12px">${ourTotal?fmtM(ourTotal):''}</td>
+          <td style="padding:9px 14px;text-align:right;font-size:12px">${supTotal!=null?`<div style="font-weight:600">${fmtM(supTotal)}</div>${l.supplierNote?`<div style="font-size:10px;color:var(--muted)">${esc(l.supplierNote)}</div>`:''}`:anyPriced?'–':'<span style="color:var(--muted2);font-style:italic">Afventer</span>'}</td>
+          <td style="padding:9px 14px;text-align:right;font-size:12px">${margin!=null?`<span style="font-weight:700;color:${margin>=0?'var(--green)':'var(--red)'}">${margin.toFixed(1)}%</span>`:''}</td>
+        </tr>`;
+      }).join('');
+      const totalOur=lines.reduce((s,l)=>s+(l.estUnitPrice&&l.qty?l.estUnitPrice*l.qty:0),0);
+      const totalSup=lines.reduce((s,l)=>s+(l.supplierPrice!=null&&l.qty?l.supplierPrice*l.qty:0),0);
+      const totMargin=totalOur&&totalSup?((totalOur-totalSup)/totalOur*100):null;
+      return`<div class="section-card">
+        <div class="section-head"><div class="section-title">Opgaver & Priser (${lines.length})</div>${anyPriced?`<span class="badge b-green">💰 Leverandørpriser modtaget</span>`:''}</div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--bg);border-bottom:2px solid var(--border)">
+            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted)">Opgave</th>
+            <th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--muted)">Antal</th>
+            <th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;color:#7c3aed">🔒 Vores pris</th>
+            <th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--muted)">Leverandørbud</th>
+            <th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--muted)">Margin</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+          ${totalOur||totalSup?`<tfoot><tr style="background:var(--bg);border-top:2px solid var(--border)">
+            <td colspan="2" style="padding:9px 14px;font-size:12px;font-weight:700">Total</td>
+            <td style="padding:9px 14px;text-align:right;font-size:12px;font-weight:700;color:#7c3aed">${totalOur?fmtM(totalOur):''}</td>
+            <td style="padding:9px 14px;text-align:right;font-size:12px;font-weight:700">${totalSup?fmtM(totalSup):''}</td>
+            <td style="padding:9px 14px;text-align:right;font-size:12px;font-weight:700">${totMargin!=null?`<span style="color:${totMargin>=0?'var(--green)':'var(--red)'}">${totMargin.toFixed(1)}%</span>`:''}</td>
+          </tr></tfoot>`:''}
+        </table></div>
+      </div>`;
+    })()}
     <div class="section-card">
       <div class="section-head"><div class="section-title">Dokumenter (${docs.length})</div><button class="btn btn-primary btn-sm" onclick="openNewDoc('${cid}')">+ Tilknyt dokument</button></div>
       <div style="padding:0 18px">${docsHtml}</div>
@@ -875,13 +933,43 @@ function advanceCtr(id){
   sv();showContractDetail(id,_ctrBack);
 }
 
+function acceptRFQ(cid){
+  const c=state.contracts.find(c=>c.id===cid);if(!c)return;
+  document.getElementById('ar-cid').value=cid;
+  document.getElementById('ar-amount').value=c.amount||'';
+  document.getElementById('ar-dead').value=c.deadline||'';
+  document.getElementById('ar-terms').value=c.terms||'';
+  openOv('accept-rfq');
+}
+function saveAcceptRFQ(){
+  const cid=document.getElementById('ar-cid').value;
+  const c=state.contracts.find(c=>c.id===cid);if(!c)return;
+  const amt=parseFloat(document.getElementById('ar-amount').value);
+  if(amt)c.amount=amt;
+  c.deadline=document.getElementById('ar-dead').value||c.deadline;
+  c.terms=document.getElementById('ar-terms').value.trim()||c.terms;
+  c.stage='draft';
+  if(!c.stageDates)c.stageDates={};
+  c.stageDates.draft=new Date().toISOString().split('T')[0];
+  sv();closeOv('accept-rfq');showContractDetail(cid,_ctrBack);
+}
+
 // ── KONTRAKTER CLM ──
 function renderKontrakter(){
   const cont=document.getElementById('kontr-pipeline');
-  if(!state.contracts.length){cont.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)">Ingen kontrakter endnu</div>';return;}
-  cont.innerHTML=CTR_STAGES.map(st=>{
-    const ctrs=state.contracts.filter(c=>c.stage===st.key);
+  if(!state.contracts.length){cont.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)">Ingen RFQ\'er eller kontrakter endnu — klik "+ Ny RFQ" for at starte</div>';return;}
+  const RFQ_KEYS=['invited','received','accepted'];
+  const CTR_KEYS=['draft','sent','signed','production','delivery','closed'];
+  const phaseHeader=(label,color)=>`<div style="display:flex;align-items:center;gap:10px;padding:14px 0 6px;user-select:none">
+    <div style="flex:1;height:1px;background:var(--border)"></div>
+    <span style="font-size:10px;font-weight:800;color:${color};text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">${label}</span>
+    <div style="flex:1;height:1px;background:var(--border)"></div>
+  </div>`;
+  const renderStages=(keys,phase,phaseColor,phaseBadgeCls)=>keys.map(stKey=>{
+    const st=CTR_STAGES.find(s=>s.key===stKey);if(!st)return'';
+    const ctrs=state.contracts.filter(c=>c.stage===stKey);
     const total=ctrs.reduce((s,c)=>s+(+c.amount||0),0);
+    const hasPrices=c=>state.contractLines.some(l=>l.contractId===c.id&&l.supplierPrice!=null);
     return`<div class="stage-bar${ctrs.length?' open':''}" style="border-left:3px solid ${st.color}" onclick="toggleBar(this)">
       <div class="stage-bar-dot" style="background:${st.color}"></div>
       <div class="stage-bar-name" style="color:${st.color}">${st.short}</div>
@@ -893,18 +981,27 @@ function renderKontrakter(){
       ${ctrs.map(c=>{
         const sup=state.suppliers.find(s=>s.id===c.supplierId)||{};
         const proj=state.projects.find(p=>p.id===c.projectId)||{};
+        const pricesIn=hasPrices(c);
         return`<div class="proj-card" onclick="showContractDetail('${c.id}')">
-          <div class="pc-top"><span class="pc-num">${esc(c.num)}</span><span class="pc-name">${esc(c.name)}</span>${c.amount?`<span class="pc-amount">${fmtM(c.amount)}</span>`:''}</div>
+          <div class="pc-top">
+            <span class="pc-num">${esc(c.num)}</span>
+            <span class="badge ${phaseBadgeCls}" style="font-size:9px">${phase}</span>
+            <span class="pc-name">${esc(c.name)}</span>
+            ${c.amount?`<span class="pc-amount">${fmtM(c.amount)}</span>`:''}
+          </div>
           <div class="pc-meta">
             <span class="pc-client">🏭 ${esc(sup.name||'–')}</span>
             ${proj.name?`<span class="badge b-blue">${esc(proj.name)}</span>`:''}
             ${c.deadline?`<span style="font-size:11px;color:var(--muted)">📅 ${fmtD(c.deadline)}</span>`:''}
-            ${c.linkSentAt?`<span class="badge b-green">🔗 Link sendt</span>`:''}
+            ${pricesIn?`<span class="badge b-green">💰 Priser modtaget</span>`:c.linkSentAt?`<span class="badge b-yellow">🔗 Sendt</span>`:''}
           </div>
         </div>`;
       }).join('')}
     </div>`;
   }).join('');
+  cont.innerHTML=
+    phaseHeader('── Udbudsfase','#64748b')+renderStages(RFQ_KEYS,'UDBUD','#64748b','b-gray')+
+    phaseHeader('── Kontraktfase','#2563eb')+renderStages(CTR_KEYS,'KONTRAKT','#2563eb','b-blue');
 }
 
 // ── LEVERANDØRER ──
@@ -1162,20 +1259,20 @@ async function submitSupplierPrices(token){
 }
 
 // ── CLM WIZARD ──
-let _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[]};
+let _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[]};
 
 function openCtrWizard(){
-  _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[]};
+  _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[]};
   wizRender();
   openOv('wiz');
 }
 
 function wizRender(){
   const s=_wiz.step;
-  [1,2,3].forEach(i=>{const el=document.getElementById('wstp-'+i);if(el)el.className='wiz-stp'+(i===s?' active':i<s?' done':'');});
+  [1,2,3,4].forEach(i=>{const el=document.getElementById('wstp-'+i);if(el)el.className='wiz-stp'+(i===s?' active':i<s?' done':'');});
   const prev=document.getElementById('wiz-prev');const nxt=document.getElementById('wiz-next');
   if(prev)prev.style.display=s>1?'':'none';
-  if(nxt)nxt.textContent=s===3?'Gem kontrakt':'Næste →';
+  if(nxt)nxt.textContent=s===4?'Send RFQ':'Næste →';
   const body=document.getElementById('wiz-body');
   if(!body)return;
   if(s===1){
@@ -1226,6 +1323,11 @@ function wizRender(){
     </div>
     <div style="font-size:11px;color:#94a3b8;margin-top:8px">${_wiz.items.length} element(er) valgt</div>`;
     if(_wiz._src!=='tasks'&&!_wiz._erpItems.length)wizLoadItems(_wiz._src);
+  }else{
+    body.innerHTML=`
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Tilføj tegninger, tekniske specifikationer eller andre dokumenter leverandøren skal kunne downloade fra portalen.</div>
+    <div id="wiz-docs-list" style="display:grid;gap:8px;margin-bottom:12px">${wizDocsHtml()}</div>
+    <button class="btn btn-ghost btn-sm" onclick="wizAddDoc()">+ Tilføj dokument</button>`;
   }
 }
 
@@ -1317,21 +1419,35 @@ function wizSelSup(id){_wiz.supplierId=id;wizRender();}
 function wizSelProj(id){_wiz.projectId=id;_wiz._erpItems=[];_wiz._lastERP='';wizRender();}
 
 function wizNext(){
-  if(_wiz.step===1){
-    if(!_wiz.supplierId){alert('Vælg en leverandør for at fortsætte');return;}
-    wizGo(2);
-  }else if(_wiz.step===2){
-    if(!_wiz.projectId){alert('Vælg et projekt for at fortsætte');return;}
-    wizGo(3);
-  }else{
-    saveWizard();
-  }
+  if(_wiz.step===1){if(!_wiz.supplierId){alert('Vælg en leverandør for at fortsætte');return;}wizGo(2);}
+  else if(_wiz.step===2){if(!_wiz.projectId){alert('Vælg et projekt for at fortsætte');return;}wizGo(3);}
+  else if(_wiz.step===3){wizGo(4);}
+  else{saveWizard();}
 }
 
 function wizGo(step){
-  if(step<1||step>3)return;
+  if(step<1||step>4)return;
   _wiz.step=step;
   wizRender();
+}
+
+function wizDocsHtml(){
+  if(!_wiz.docs.length)return'<div style="color:#94a3b8;font-size:13px;font-style:italic;padding:8px 0">Ingen dokumenter tilføjet endnu</div>';
+  return _wiz.docs.map((d,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center">
+    <input class="fi" placeholder="Dokumentnavn (fx Plantegning)" value="${esc(d.name)}" oninput="_wiz.docs[${i}].name=this.value" style="font-size:13px">
+    <input class="fi" placeholder="https://..." value="${esc(d.url)}" oninput="_wiz.docs[${i}].url=this.value" style="font-size:13px">
+    <button class="btn btn-danger btn-sm" onclick="wizRemoveDoc(${i})">✕</button>
+  </div>`).join('');
+}
+function wizAddDoc(){
+  _wiz.docs.push({name:'',url:''});
+  const list=document.getElementById('wiz-docs-list');
+  if(list)list.innerHTML=wizDocsHtml();
+}
+function wizRemoveDoc(i){
+  _wiz.docs.splice(i,1);
+  const list=document.getElementById('wiz-docs-list');
+  if(list)list.innerHTML=wizDocsHtml();
 }
 
 function saveWizard(){
@@ -1340,7 +1456,8 @@ function saveWizard(){
   if(!name){alert('Kontraktnavn påkrævet');return;}
   if(!_wiz.supplierId){alert('Vælg leverandør');return;}
   const cid=genId();
-  const c={id:cid,num:nextCtrNum(),name,taskId:null,bidId:null,supplierId:_wiz.supplierId,projectId:_wiz.projectId||null,stage:'draft',amount:0,deadline:'',terms:'',documents:[],stageDates:{},linkSentAt:null,createdAt:new Date().toISOString().split('T')[0]};
+  const docs=_wiz.docs.filter(d=>d.name&&d.url).map(d=>({id:genId(),name:d.name,signedUrl:d.url,status:'template',templateKey:null}));
+  const c={id:cid,num:nextCtrNum(),name,taskId:null,bidId:null,supplierId:_wiz.supplierId,projectId:_wiz.projectId||null,stage:'invited',amount:0,deadline:'',terms:'',documents:docs,stageDates:{invited:new Date().toISOString().split('T')[0]},linkSentAt:null,createdAt:new Date().toISOString().split('T')[0]};
   state.contracts.push(c);
   const newLines=_wiz.items.map((it,i)=>({id:genId(),contractId:cid,sortOrder:i,sourceTable:it.sourceTable||'',sourceId:it._id&&!String(it._id).startsWith('_')?it._id:null,name:it.name,description:it.description||'',unit:it.unit||'',qty:parseFloat(it.qty)||0,estUnitPrice:it.estUnitPrice||0,supplierPrice:null,supplierNote:'',pricedAt:null,createdAt:new Date().toISOString().split('T')[0]}));
   state.contractLines=[...state.contractLines,...newLines];
