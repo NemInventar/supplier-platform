@@ -136,6 +136,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
   <div class="nav">
     <div class="nav-item active" onclick="nav('projekter')"><span class="ico">📁</span>Projekter</div>
     <div class="nav-item" onclick="nav('leverandoerer')"><span class="ico">🏭</span>Leverandører</div>
+    <div class="nav-item" onclick="nav('rfq')"><span class="ico">📤</span>RFQ</div>
     <div class="nav-item" onclick="nav('kontrakter')"><span class="ico">📋</span>Kontrakter</div>
     <div class="nav-item" onclick="nav('disputes')"><span class="ico">⚠️</span>Disputes<span class="nav-badge" id="nb-disp">0</span></div>
     <div class="nav-item" onclick="nav('indstillinger')"><span class="ico">⚙️</span>Indstillinger</div>
@@ -168,9 +169,14 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
   <div id="sups-list"></div>
 </div>
 
+<div id="page-rfq" class="page">
+  <div class="topbar"><div><div class="page-title">RFQ – Udbud</div><div class="page-sub">Anmodninger om tilbud sendt til leverandører</div></div><button class="btn btn-primary" onclick="openRFQWizard()">+ Ny RFQ</button></div>
+  <div id="rfq-pipeline"></div>
+</div>
+
 <div id="page-kontrakter" class="page">
-  <div class="topbar"><div><div class="page-title">Kontrakter & RFQ</div><div class="page-sub">Udbud og kontraktforløb</div></div><button class="btn btn-primary" onclick="openNewCtr()">+ Ny RFQ</button></div>
-  <div id="kontr-pipeline"></div>
+  <div class="topbar"><div><div class="page-title">Kontrakter</div><div class="page-sub">Skabeloner og aktive kontrakter</div></div><button class="btn btn-primary" onclick="openNewCtr()">+ Ny kontrakt</button></div>
+  <div id="kontr-content"></div>
 </div>
 
 <div id="page-contract-detail" class="page">
@@ -404,6 +410,30 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
   <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('accept-rfq')">Annuller</button><button class="btn btn-primary" onclick="saveAcceptRFQ()">Opret kontrakt →</button></div>
 </div></div>
 
+<div class="overlay" id="ov-tmpl">
+<div class="modal" style="max-width:480px">
+  <div class="mhead"><div class="mtitle" id="tmpl-modal-title">Upload kontraktskabelon</div><button class="mclose" onclick="closeOv('tmpl')">✕</button></div>
+  <div class="mbody">
+    <input type="hidden" id="tmpl-id">
+    <div class="fg"><label class="fl">Navn på skabelon *</label><input class="fi" id="tmpl-name" placeholder="fx AB18 Leverandørkontrakt"></div>
+    <div class="fg"><label class="fl">Kategori</label>
+      <select class="fs" id="tmpl-cat">
+        <option value="contract">Kontrakt</option>
+        <option value="nda">NDA / Fortrolighed</option>
+        <option value="delivery">Leveringsaftale</option>
+        <option value="quality">Kvalitetskrav</option>
+        <option value="drawing">Tegning / Specifikation</option>
+        <option value="other">Andet</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Fil (PDF, Word, Excel)</label>
+      <input type="file" id="tmpl-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg" class="fi" style="padding:7px">
+    </div>
+    <div id="tmpl-upload-status" style="display:none;margin-top:8px;font-size:12px;color:var(--muted)"></div>
+  </div>
+  <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('tmpl')">Annuller</button><button class="btn btn-primary" id="tmpl-save-btn" onclick="saveTemplate()">Upload & Gem</button></div>
+</div></div>
+
 <div class="overlay" id="ov-wiz">
 <div class="modal" style="max-width:700px;width:92vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">
   <div class="mhead"><div class="mtitle" id="wiz-title">Ny RFQ</div><button class="mclose" onclick="closeOv('wiz')">✕</button></div>
@@ -433,7 +463,7 @@ window.dispatchEvent(new Event('sb-ready'));
 </script>
 <script>
 const SK='neminventar_sup_v3',DV=1;
-const EMPTY={_version:1,projects:[],tasks:[],bids:[],contracts:[],suppliers:[],disputes:[],contractLines:[],templateUrls:{}};
+const EMPTY={_version:1,projects:[],tasks:[],bids:[],contracts:[],suppliers:[],disputes:[],contractLines:[],contractTemplates:[],templateUrls:{}};
 
 const PROJ_STATUS={
   active:   {label:'Aktiv',       color:'#2563eb',cls:'b-blue'},
@@ -480,7 +510,7 @@ function appOf(uuid){return uuid==null?null:(ID.toApp.get(uuid)||null);}
 
 async function initFromSupabase(){
   try{
-    const[proj,tasks,bids,ctr,sup,disp,lines,sett]=await Promise.all([
+    const[proj,tasks,bids,ctr,sup,disp,lines,tmpls,sett]=await Promise.all([
       sb.from('projects_2026_01_15_06_45').select('*').eq('status','active'),
       sb.from('sp_tasks').select('*'),
       sb.from('sp_bids').select('*'),
@@ -488,20 +518,22 @@ async function initFromSupabase(){
       sb.from('companies_2026_04_27').select('*').eq('is_contract_supplier',true),
       sb.from('sp_disputes').select('*'),
       sb.from('sp_contract_lines').select('*'),
+      sb.from('sp_contract_templates').select('*').order('created_at'),
       sb.from('sp_settings').select('*').eq('key','templateUrls').maybeSingle()
     ]);
-    for(const r of[proj,tasks,bids,ctr,sup,disp,lines])if(r.error)throw r.error;
+    for(const r of[proj,tasks,bids,ctr,sup,disp,lines,tmpls])if(r.error)throw r.error;
     const reg=rows=>(rows||[]).forEach(x=>regId(x.id,x.app_id||x.id));
-    reg(proj.data);reg(tasks.data);reg(bids.data);reg(ctr.data);reg(sup.data);reg(disp.data);reg(lines.data);
+    reg(proj.data);reg(tasks.data);reg(bids.data);reg(ctr.data);reg(sup.data);reg(disp.data);reg(lines.data);reg(tmpls.data);
     state={
       _version:1,
       projects:(proj.data||[]).map(r=>({id:r.app_id||r.id,num:r.project_number||'',name:r.name,client:r.customer||'',status:r.status||'active',budget:r.budget_amount||0,deadline:r.deadline||'',description:r.description||'',createdAt:r.created_at})),
       tasks:(tasks.data||[]).map(r=>({id:r.app_id||r.id,num:r.num||'',projectId:appOf(r.project_id),name:r.name,description:r.description||'',estimatedAmount:r.estimated_amount||0,unit:r.unit||'',qty:r.qty||'',createdAt:r.created_at})),
       bids:(bids.data||[]).map(r=>({id:r.app_id||r.id,taskId:appOf(r.task_id),supplierId:appOf(r.supplier_id),amount:r.amount||0,note:r.note||'',submittedAt:r.submitted_at,status:r.status||'pending'})),
-      contracts:(ctr.data||[]).map(r=>({id:r.app_id||r.id,num:r.num||'',name:r.name,taskId:appOf(r.task_id),bidId:appOf(r.bid_id),supplierId:appOf(r.supplier_id),projectId:appOf(r.project_id),stage:r.stage||'invited',amount:r.amount||0,deadline:r.deadline||'',terms:r.terms||'',documents:r.documents||[],stageDates:r.stage_dates||{},linkSentAt:r.link_sent_at||null,createdAt:r.created_at})),
+      contracts:(ctr.data||[]).map(r=>({id:r.app_id||r.id,num:r.num||'',name:r.name,type:r.type||'contract',taskId:appOf(r.task_id),bidId:appOf(r.bid_id),supplierId:appOf(r.supplier_id),projectId:appOf(r.project_id),stage:r.stage||'invited',amount:r.amount||0,deadline:r.deadline||'',terms:r.terms||'',documents:r.documents||[],stageDates:r.stage_dates||{},linkSentAt:r.link_sent_at||null,createdAt:r.created_at})),
       suppliers:(sup.data||[]).map(r=>({id:r.app_id||r.id,name:r.name,country:r.country||'',cvr:r.cvr||'',cat:(Array.isArray(r.tags)&&r.tags[0])||'andet',cname:r.default_contact_name||'',email:r.default_contact_email||'',phone:r.default_contact_phone||'',notes:r.notes||''})),
       disputes:(disp.data||[]).map(r=>({id:r.app_id||r.id,title:r.title,supplierId:appOf(r.supplier_id),contractId:appOf(r.contract_id),severity:r.severity||'medium',status:r.status||'open',scope:r.scope||'other',description:r.description||'',createdAt:r.created_at,timeline:r.timeline||[]})),
       contractLines:(lines.data||[]).map(r=>({id:r.app_id||r.id,contractId:appOf(r.contract_id),sortOrder:r.sort_order||0,sourceTable:r.source_table||'',sourceId:r.source_id||null,name:r.name||'',description:r.description||'',unit:r.unit||'',qty:r.qty||0,estUnitPrice:r.est_unit_price||0,supplierPrice:r.supplier_price||null,supplierNote:r.supplier_note||'',pricedAt:r.priced_at||null,createdAt:r.created_at})),
+      contractTemplates:(tmpls.data||[]).map(r=>({id:r.app_id||r.id,name:r.name,fileName:r.file_name||'',fileUrl:r.file_url||'',fileSize:r.file_size||0,fileType:r.file_type||'',category:r.category||'other',createdAt:r.created_at})),
       templateUrls:(sett&&sett.data&&sett.data.value)||{}
     };
     _synced=JSON.parse(JSON.stringify(state));
@@ -517,9 +549,10 @@ const toProjRow=p=>({app_id:p.id,project_number:p.num||'',name:p.name,customer:p
 const toSupRow=s=>({app_id:s.id,name:s.name,country:s.country||'',cvr:s.cvr||'',tags:s.cat?[s.cat]:[],default_contact_name:s.cname||'',default_contact_email:s.email||'',default_contact_phone:s.phone||'',notes:s.notes||'',is_supplier:false,is_contract_supplier:true});
 const toTaskRow=t=>({app_id:t.id,num:t.num||'',project_id:ID.toUuid.get(t.projectId)||null,name:t.name,description:t.description||'',estimated_amount:t.estimatedAmount||0,unit:t.unit||'',qty:t.qty||'',created_at:t.createdAt});
 const toBidRow=b=>({app_id:b.id,task_id:ID.toUuid.get(b.taskId)||null,supplier_id:ID.toUuid.get(b.supplierId)||null,amount:b.amount||0,note:b.note||'',submitted_at:b.submittedAt,status:b.status||'pending'});
-const toCtrRow=c=>({app_id:c.id,num:c.num||'',name:c.name,task_id:ID.toUuid.get(c.taskId)||null,bid_id:ID.toUuid.get(c.bidId)||null,supplier_id:ID.toUuid.get(c.supplierId)||null,project_id:ID.toUuid.get(c.projectId)||null,stage:c.stage||'invited',amount:c.amount||0,deadline:c.deadline||null,terms:c.terms||'',documents:c.documents||[],stage_dates:c.stageDates||{},link_sent_at:c.linkSentAt||null,created_at:c.createdAt});
+const toCtrRow=c=>({app_id:c.id,num:c.num||'',name:c.name,type:c.type||'contract',task_id:ID.toUuid.get(c.taskId)||null,bid_id:ID.toUuid.get(c.bidId)||null,supplier_id:ID.toUuid.get(c.supplierId)||null,project_id:ID.toUuid.get(c.projectId)||null,stage:c.stage||'invited',amount:c.amount||0,deadline:c.deadline||null,terms:c.terms||'',documents:c.documents||[],stage_dates:c.stageDates||{},link_sent_at:c.linkSentAt||null,created_at:c.createdAt});
 const toDispRow=d=>({app_id:d.id,title:d.title,supplier_id:ID.toUuid.get(d.supplierId)||null,contract_id:ID.toUuid.get(d.contractId)||null,severity:d.severity||'medium',status:d.status||'open',scope:d.scope||'other',description:d.description||'',created_at:d.createdAt,timeline:d.timeline||[]});
 const toLineRow=l=>({app_id:l.id,contract_id:ID.toUuid.get(l.contractId)||null,sort_order:l.sortOrder||0,source_table:l.sourceTable||'',source_id:l.sourceId||null,name:l.name||'',description:l.description||'',unit:l.unit||'',qty:l.qty||0,est_unit_price:l.estUnitPrice||0,supplier_price:l.supplierPrice||null,supplier_note:l.supplierNote||'',priced_at:l.pricedAt||null,created_at:l.createdAt});
+const toTmplRow=t=>({app_id:t.id,name:t.name,file_name:t.fileName||'',file_url:t.fileUrl||'',file_size:t.fileSize||0,file_type:t.fileType||'',category:t.category||'other',created_at:t.createdAt});
 
 let _synced=null,_syncTimer=null,_syncing=false;
 function scheduleSync(){if(!window.sb)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(syncToSupabase,800);}
@@ -535,6 +568,7 @@ async function syncToSupabase(){
     await syncColl('bids',snap.bids,toBidRow,'sp_bids');
     await syncColl('contracts',snap.contracts,toCtrRow,'sp_contracts');
     await syncColl('contractLines',snap.contractLines||[],toLineRow,'sp_contract_lines');
+    await syncColl('contractTemplates',snap.contractTemplates||[],toTmplRow,'sp_contract_templates');
     await syncColl('disputes',snap.disputes,toDispRow,'sp_disputes');
     await syncSettings(snap.templateUrls);
     _synced=snap;
@@ -572,7 +606,7 @@ async function migrateLocalToSupabaseIfNeeded(){
     const{count}=await sb.from('sp_contracts').select('*',{count:'exact',head:true});
     if((count||0)===0){
       state=local;
-      _synced={projects:[],suppliers:[],tasks:[],bids:[],contracts:[],disputes:[],contractLines:[]};
+      _synced={projects:[],suppliers:[],tasks:[],bids:[],contracts:[],disputes:[],contractLines:[],contractTemplates:[]};
       await syncToSupabase();
     }
     localStorage.setItem('neminventar_migrated_v1','done');
@@ -595,7 +629,7 @@ function nextCtrNum(){const ns=state.contracts.map(c=>parseInt((c.num||'').repla
 function updateBadge(){const n=state.disputes.filter(d=>d.status==='open'||d.status==='processing').length;const b=document.getElementById('nb-disp');b.textContent=n;b.style.display=n>0?'':'none';}
 
 let _page='projekter';
-const PAGE_NAV_IDX={projekter:0,'projekt-detail':0,'task-detail':0,leverandoerer:1,kontrakter:2,'contract-detail':2,disputes:3,'dispute-detail':3,indstillinger:4};
+const PAGE_NAV_IDX={projekter:0,'projekt-detail':0,'task-detail':0,leverandoerer:1,rfq:2,'contract-detail':2,kontrakter:3,disputes:4,'dispute-detail':4,indstillinger:5};
 
 function nav(name,skipRender){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -606,6 +640,7 @@ function nav(name,skipRender){
   if(!skipRender){
     if(name==='projekter')renderProj();
     else if(name==='leverandoerer')renderSups();
+    else if(name==='rfq')renderRFQer();
     else if(name==='kontrakter')renderKontrakter();
     else if(name==='disputes')renderDisps();
     else if(name==='indstillinger')renderIndst();
@@ -949,27 +984,23 @@ function saveAcceptRFQ(){
   c.deadline=document.getElementById('ar-dead').value||c.deadline;
   c.terms=document.getElementById('ar-terms').value.trim()||c.terms;
   c.stage='draft';
+  c.type='contract';
   if(!c.stageDates)c.stageDates={};
   c.stageDates.draft=new Date().toISOString().split('T')[0];
-  sv();closeOv('accept-rfq');showContractDetail(cid,_ctrBack);
+  sv();closeOv('accept-rfq');showContractDetail(cid,'kontrakter');
 }
 
-// ── KONTRAKTER CLM ──
-function renderKontrakter(){
-  const cont=document.getElementById('kontr-pipeline');
-  if(!state.contracts.length){cont.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)">Ingen RFQ\'er eller kontrakter endnu — klik "+ Ny RFQ" for at starte</div>';return;}
+// ── RFQ ──
+function renderRFQer(){
+  const cont=document.getElementById('rfq-pipeline');
+  const rfqs=state.contracts.filter(c=>c.type==='rfq');
   const RFQ_KEYS=['invited','received','accepted'];
-  const CTR_KEYS=['draft','sent','signed','production','delivery','closed'];
-  const phaseHeader=(label,color)=>`<div style="display:flex;align-items:center;gap:10px;padding:14px 0 6px;user-select:none">
-    <div style="flex:1;height:1px;background:var(--border)"></div>
-    <span style="font-size:10px;font-weight:800;color:${color};text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">${label}</span>
-    <div style="flex:1;height:1px;background:var(--border)"></div>
-  </div>`;
-  const renderStages=(keys,phase,phaseColor,phaseBadgeCls)=>keys.map(stKey=>{
+  const hasPrices=c=>state.contractLines.some(l=>l.contractId===c.id&&l.supplierPrice!=null);
+  if(!rfqs.length){cont.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)">Ingen RFQ\'er endnu — klik "+ Ny RFQ" for at starte</div>';return;}
+  cont.innerHTML=RFQ_KEYS.map(stKey=>{
     const st=CTR_STAGES.find(s=>s.key===stKey);if(!st)return'';
-    const ctrs=state.contracts.filter(c=>c.stage===stKey);
+    const ctrs=rfqs.filter(c=>c.stage===stKey);
     const total=ctrs.reduce((s,c)=>s+(+c.amount||0),0);
-    const hasPrices=c=>state.contractLines.some(l=>l.contractId===c.id&&l.supplierPrice!=null);
     return`<div class="stage-bar${ctrs.length?' open':''}" style="border-left:3px solid ${st.color}" onclick="toggleBar(this)">
       <div class="stage-bar-dot" style="background:${st.color}"></div>
       <div class="stage-bar-name" style="color:${st.color}">${st.short}</div>
@@ -982,10 +1013,9 @@ function renderKontrakter(){
         const sup=state.suppliers.find(s=>s.id===c.supplierId)||{};
         const proj=state.projects.find(p=>p.id===c.projectId)||{};
         const pricesIn=hasPrices(c);
-        return`<div class="proj-card" onclick="showContractDetail('${c.id}')">
+        return`<div class="proj-card" onclick="showContractDetail('${c.id}','rfq')">
           <div class="pc-top">
             <span class="pc-num">${esc(c.num)}</span>
-            <span class="badge ${phaseBadgeCls}" style="font-size:9px">${phase}</span>
             <span class="pc-name">${esc(c.name)}</span>
             ${c.amount?`<span class="pc-amount">${fmtM(c.amount)}</span>`:''}
           </div>
@@ -999,9 +1029,119 @@ function renderKontrakter(){
       }).join('')}
     </div>`;
   }).join('');
-  cont.innerHTML=
-    phaseHeader('── Udbudsfase','#64748b')+renderStages(RFQ_KEYS,'UDBUD','#64748b','b-gray')+
-    phaseHeader('── Kontraktfase','#2563eb')+renderStages(CTR_KEYS,'KONTRAKT','#2563eb','b-blue');
+}
+
+// ── KONTRAKTER ──
+const TMPL_CAT={contract:'Kontrakt',nda:'NDA',delivery:'Leveringsaftale',quality:'Kvalitetskrav',drawing:'Tegning',other:'Andet'};
+function renderKontrakter(){
+  const cont=document.getElementById('kontr-content');
+  const ctrs=state.contracts.filter(c=>c.type==='contract'||(c.type!=='rfq'&&!['invited','received','accepted'].includes(c.stage)));
+  const CTR_KEYS=['draft','sent','signed','production','delivery','closed'];
+
+  const tmplsHtml=`<div class="section-card" style="margin-bottom:18px">
+    <div class="section-head">
+      <div class="section-title">Kontraktskabeloner (${state.contractTemplates.length})</div>
+      <button class="btn btn-ghost btn-sm" onclick="openUploadTmpl()">+ Upload skabelon</button>
+    </div>
+    ${state.contractTemplates.length?state.contractTemplates.map(t=>{
+      const ext=(t.fileName||'').split('.').pop().toLowerCase();
+      const icon={pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',png:'🖼',jpg:'🖼'}[ext]||'📎';
+      const catLabel=TMPL_CAT[t.category]||'Andet';
+      return`<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border)">
+        <span style="font-size:22px">${icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${esc(t.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${catLabel}${t.fileName?' · '+esc(t.fileName):''}</div>
+        </div>
+        ${t.fileUrl?`<a href="${esc(t.fileUrl)}" target="_blank" class="btn btn-ghost btn-sm">⬇ Download</a>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteTmpl('${t.id}')">Slet</button>
+      </div>`;
+    }).join(''):`<div style="padding:20px 18px;color:var(--muted);font-size:13px">Ingen skabeloner endnu — upload din første</div>`}
+  </div>`;
+
+  const hasPrices=c=>state.contractLines.some(l=>l.contractId===c.id&&l.supplierPrice!=null);
+  const ctrsHtml=ctrs.length?CTR_KEYS.map(stKey=>{
+    const st=CTR_STAGES.find(s=>s.key===stKey);if(!st)return'';
+    const group=ctrs.filter(c=>c.stage===stKey);
+    if(!group.length)return'';
+    const total=group.reduce((s,c)=>s+(+c.amount||0),0);
+    return`<div class="stage-bar open" style="border-left:3px solid ${st.color}">
+      <div class="stage-bar-dot" style="background:${st.color}"></div>
+      <div class="stage-bar-name" style="color:${st.color}">${st.short}</div>
+      <div class="stage-bar-count">${group.length}</div>
+      ${total?`<div class="stage-bar-total">${fmtM(total)}</div>`:''}
+    </div>
+    <div class="stage-cards open">
+      ${group.map(c=>{
+        const sup=state.suppliers.find(s=>s.id===c.supplierId)||{};
+        const proj=state.projects.find(p=>p.id===c.projectId)||{};
+        const pricesIn=hasPrices(c);
+        return`<div class="proj-card" onclick="showContractDetail('${c.id}','kontrakter')">
+          <div class="pc-top">
+            <span class="pc-num">${esc(c.num)}</span>
+            <span class="pc-name">${esc(c.name)}</span>
+            ${c.amount?`<span class="pc-amount">${fmtM(c.amount)}</span>`:''}
+          </div>
+          <div class="pc-meta">
+            <span class="pc-client">🏭 ${esc(sup.name||'–')}</span>
+            ${proj.name?`<span class="badge b-blue">${esc(proj.name)}</span>`:''}
+            ${c.deadline?`<span style="font-size:11px;color:var(--muted)">📅 ${fmtD(c.deadline)}</span>`:''}
+            ${pricesIn?`<span class="badge b-green">💰 Priser modtaget</span>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join(''):`<div style="text-align:center;padding:40px;color:var(--muted)">Ingen aktive kontrakter — opret en ny eller promovér en RFQ</div>`;
+
+  cont.innerHTML=tmplsHtml+ctrsHtml;
+}
+
+// ── KONTRAKTSKABELONER ──
+function openUploadTmpl(){
+  document.getElementById('tmpl-id').value='';
+  document.getElementById('tmpl-name').value='';
+  document.getElementById('tmpl-cat').value='contract';
+  document.getElementById('tmpl-file').value='';
+  document.getElementById('tmpl-upload-status').style.display='none';
+  document.getElementById('tmpl-save-btn').disabled=false;
+  document.getElementById('tmpl-save-btn').textContent='Upload & Gem';
+  openOv('tmpl');
+}
+
+async function saveTemplate(){
+  const name=document.getElementById('tmpl-name').value.trim();
+  if(!name){alert('Navn påkrævet');return;}
+  const fileInput=document.getElementById('tmpl-file');
+  const file=fileInput.files&&fileInput.files[0];
+  const btn=document.getElementById('tmpl-save-btn');
+  const status=document.getElementById('tmpl-upload-status');
+  btn.disabled=true;btn.textContent='Uploader...';
+  status.style.display='block';status.textContent='Uploader fil...';
+  try{
+    let fileUrl='',fileName='',fileSize=0,fileType='';
+    if(file){
+      const ext=file.name.split('.').pop();
+      const path='templates/'+genId()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+      const{data:up,error:ue}=await window.sb.storage.from('contract-docs').upload(path,file,{contentType:file.type,upsert:false});
+      if(ue)throw ue;
+      const{data:{publicUrl}}=window.sb.storage.from('contract-docs').getPublicUrl(path);
+      fileUrl=publicUrl;fileName=file.name;fileSize=file.size;fileType=file.type;
+    }
+    const id=genId();
+    const tmpl={id,name,fileName,fileUrl,fileSize,fileType,category:document.getElementById('tmpl-cat').value,createdAt:new Date().toISOString().split('T')[0]};
+    if(!state.contractTemplates)state.contractTemplates=[];
+    state.contractTemplates.push(tmpl);
+    sv();closeOv('tmpl');renderKontrakter();
+  }catch(e){
+    status.textContent='Fejl: '+e.message;
+    btn.disabled=false;btn.textContent='Upload & Gem';
+  }
+}
+
+function deleteTmpl(id){
+  if(!confirm('Slet skabelon?'))return;
+  state.contractTemplates=(state.contractTemplates||[]).filter(t=>t.id!==id);
+  sv();renderKontrakter();
 }
 
 // ── LEVERANDØRER ──
@@ -1259,10 +1399,11 @@ async function submitSupplierPrices(token){
 }
 
 // ── CLM WIZARD ──
-let _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[]};
+let _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[],type:'rfq'};
 
-function openCtrWizard(){
-  _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[]};
+function openRFQWizard(){
+  _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'quotes',_erpItems:[],docs:[],type:'rfq'};
+  document.getElementById('wiz-title').textContent='Ny RFQ';
   wizRender();
   openOv('wiz');
 }
@@ -1457,16 +1598,15 @@ function saveWizard(){
   if(!_wiz.supplierId){alert('Vælg leverandør');return;}
   const cid=genId();
   const docs=_wiz.docs.filter(d=>d.name&&d.url).map(d=>({id:genId(),name:d.name,signedUrl:d.url,status:'template',templateKey:null}));
-  const c={id:cid,num:nextCtrNum(),name,taskId:null,bidId:null,supplierId:_wiz.supplierId,projectId:_wiz.projectId||null,stage:'invited',amount:0,deadline:'',terms:'',documents:docs,stageDates:{invited:new Date().toISOString().split('T')[0]},linkSentAt:null,createdAt:new Date().toISOString().split('T')[0]};
+  const type=_wiz.type||'rfq';
+  const c={id:cid,num:nextCtrNum(),name,type,taskId:null,bidId:null,supplierId:_wiz.supplierId,projectId:_wiz.projectId||null,stage:'invited',amount:0,deadline:'',terms:'',documents:docs,stageDates:{invited:new Date().toISOString().split('T')[0]},linkSentAt:null,createdAt:new Date().toISOString().split('T')[0]};
   state.contracts.push(c);
   const newLines=_wiz.items.map((it,i)=>({id:genId(),contractId:cid,sortOrder:i,sourceTable:it.sourceTable||'',sourceId:it._id&&!String(it._id).startsWith('_')?it._id:null,name:it.name,description:it.description||'',unit:it.unit||'',qty:parseFloat(it.qty)||0,estUnitPrice:it.estUnitPrice||0,supplierPrice:null,supplierNote:'',pricedAt:null,createdAt:new Date().toISOString().split('T')[0]}));
   state.contractLines=[...state.contractLines,...newLines];
   sv();
   closeOv('wiz');
-  showContractDetail(cid,'kontrakter');
+  showContractDetail(cid,type==='rfq'?'rfq':'kontrakter');
 }
-
-function openNewCtr(){openCtrWizard();}
 
 // ── MODALS ──
 function openOv(n){document.getElementById('ov-'+n).classList.add('open');}
@@ -1504,8 +1644,8 @@ function openNewCtr(){
 }
 function openNewCtrFromBid(tid,bidId){const t=state.tasks.find(t=>t.id===tid)||{};const b=state.bids.find(b=>b.id===bidId)||{};const proj=state.projects.find(p=>p.id===t.projectId)||{};document.getElementById('mc-title').textContent='Opret kontrakt';document.getElementById('mc-id').value='';document.getElementById('mc-taskid').value=tid;document.getElementById('mc-bidid').value=bidId||'';document.getElementById('mc-name').value=(proj.name?proj.name+' – ':'')+t.name||'Ny kontrakt';document.getElementById('mc-stage').value='accepted';document.getElementById('mc-amount').value=b.amount||'';document.getElementById('mc-dead').value='';document.getElementById('mc-terms').value='';_fillCtrSelects(b.supplierId||'',t.projectId||'');openOv('ctr');}
 function openEditCtr(id){const c=state.contracts.find(c=>c.id===id);if(!c)return;document.getElementById('mc-title').textContent='Rediger kontrakt';document.getElementById('mc-id').value=id;document.getElementById('mc-taskid').value=c.taskId||'';document.getElementById('mc-bidid').value=c.bidId||'';document.getElementById('mc-name').value=c.name||'';document.getElementById('mc-stage').value=c.stage||'draft';document.getElementById('mc-amount').value=c.amount||'';document.getElementById('mc-dead').value=c.deadline||'';document.getElementById('mc-terms').value=c.terms||'';_fillCtrSelects(c.supplierId||'',c.projectId||'');openOv('ctr');}
-function delCtr(id){if(!confirm('Slet kontrakt?'))return;state.contractLines=state.contractLines.filter(l=>l.contractId!==id);state.contracts=state.contracts.filter(c=>c.id!==id);sv();nav('kontrakter');}
-function saveCtr(){const id=document.getElementById('mc-id').value;const name=document.getElementById('mc-name').value.trim();if(!name){alert('Kontraktnavn påkrævet');return;}const tid=document.getElementById('mc-taskid').value;const bidId=document.getElementById('mc-bidid').value;const task=state.tasks.find(t=>t.id===tid);const bid=state.bids.find(b=>b.id===bidId);const ex=id?state.contracts.find(c=>c.id===id):null;const supId=document.getElementById('mc-sup').value||(bid?bid.supplierId:'')|| (ex?ex.supplierId:'');const projId=document.getElementById('mc-proj-sel').value||(task?task.projectId:'')|| (ex?ex.projectId:'');if(!supId){alert('Leverandør påkrævet');return;}const data={id:id||genId(),num:ex?ex.num:nextCtrNum(),name,taskId:tid||null,bidId:bidId||null,supplierId:supId,projectId:projId||null,stage:document.getElementById('mc-stage').value,amount:parseFloat(document.getElementById('mc-amount').value)||0,deadline:document.getElementById('mc-dead').value,terms:document.getElementById('mc-terms').value.trim(),documents:ex?ex.documents||[]:[],stageDates:ex?ex.stageDates||{}:{},linkSentAt:ex?ex.linkSentAt||null:null,createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.contracts.findIndex(c=>c.id===id);if(i>=0)state.contracts[i]=data;}else state.contracts.push(data);sv();closeOv('ctr');if(tid)showTaskDetail(tid,_taskProjId);else showContractDetail(data.id,_ctrBack);}
+function delCtr(id){if(!confirm('Slet kontrakt?'))return;const c=state.contracts.find(x=>x.id===id);const backPage=c&&c.type==='rfq'?'rfq':'kontrakter';state.contractLines=state.contractLines.filter(l=>l.contractId!==id);state.contracts=state.contracts.filter(c=>c.id!==id);sv();nav(backPage);}
+function saveCtr(){const id=document.getElementById('mc-id').value;const name=document.getElementById('mc-name').value.trim();if(!name){alert('Kontraktnavn påkrævet');return;}const tid=document.getElementById('mc-taskid').value;const bidId=document.getElementById('mc-bidid').value;const task=state.tasks.find(t=>t.id===tid);const bid=state.bids.find(b=>b.id===bidId);const ex=id?state.contracts.find(c=>c.id===id):null;const supId=document.getElementById('mc-sup').value||(bid?bid.supplierId:'')|| (ex?ex.supplierId:'');const projId=document.getElementById('mc-proj-sel').value||(task?task.projectId:'')|| (ex?ex.projectId:'');if(!supId){alert('Leverandør påkrævet');return;}const data={id:id||genId(),num:ex?ex.num:nextCtrNum(),name,type:ex?ex.type||'contract':'contract',taskId:tid||null,bidId:bidId||null,supplierId:supId,projectId:projId||null,stage:document.getElementById('mc-stage').value,amount:parseFloat(document.getElementById('mc-amount').value)||0,deadline:document.getElementById('mc-dead').value,terms:document.getElementById('mc-terms').value.trim(),documents:ex?ex.documents||[]:[],stageDates:ex?ex.stageDates||{}:{},linkSentAt:ex?ex.linkSentAt||null:null,createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.contracts.findIndex(c=>c.id===id);if(i>=0)state.contracts[i]=data;}else state.contracts.push(data);sv();closeOv('ctr');if(tid)showTaskDetail(tid,_taskProjId);else showContractDetail(data.id,'kontrakter');}
 
 function openNewDoc(cid){document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value='';['dd-name','dd-url','dd-sdate'].forEach(id=>document.getElementById(id).value='');document.getElementById('dd-tmpl').value='';document.getElementById('dd-status').value='template';openOv('doc');}
 function openEditDoc(cid,did){const c=state.contracts.find(c=>c.id===cid);if(!c)return;const d=(c.documents||[]).find(d=>d.id===did);if(!d)return;document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value=did;document.getElementById('dd-tmpl').value=d.templateKey||'';document.getElementById('dd-name').value=d.name||'';document.getElementById('dd-status').value=d.status||'template';document.getElementById('dd-url').value=d.signedUrl||'';document.getElementById('dd-sdate').value=d.signedDate||'';openOv('doc');}
