@@ -440,7 +440,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
       </select>
     </div>
     <div class="fg"><label class="fl">Fil (PDF, Word, Excel)</label>
-      <input type="file" id="tmpl-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg" class="fi" style="padding:7px">
+      <input type="file" id="tmpl-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dxf,.dwg" class="fi" style="padding:7px">
     </div>
     <div id="tmpl-upload-status" style="display:none;margin-top:8px;font-size:12px;color:var(--muted)"></div>
   </div>
@@ -1192,7 +1192,7 @@ async function saveTemplate(){
     let fileUrl='',fileName='',fileSize=0,fileType='';
     if(file){
       const ext=(file.name.split('.').pop()||'').toLowerCase();
-      const MIME_FALLBACK={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg'};
+      const MIME_FALLBACK={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',dxf:'image/vnd.dxf',dwg:'image/vnd.dwg'};
       const contentType=file.type||MIME_FALLBACK[ext]||'application/octet-stream';
       const path='templates/'+genId()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
       const{data:up,error:ue}=await window.sb.storage.from('contract-docs').upload(path,file,{contentType,upsert:false});
@@ -2120,7 +2120,7 @@ async function saveDoc(){
   const btn=document.getElementById('dd-save-btn');
   const statusEl=document.getElementById('dd-upload-status');
   btn.disabled=true;
-  const MIME={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',dwg:'application/acad',dxf:'application/dxf'};
+  const MIME={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',dwg:'image/vnd.dwg',dxf:'image/vnd.dxf'};
   const uploadFile=async(file)=>{
     const ext=(file.name.split('.').pop()||'').toLowerCase();
     const path='drawings/'+genId()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
