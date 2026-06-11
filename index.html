@@ -108,6 +108,17 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
 .stat-val{font-size:20px;font-weight:800}.stat-sub{font-size:11px;color:var(--muted);margin-top:1px}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 .copy-box{background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--muted);word-break:break-all;font-family:monospace;cursor:text;user-select:all}
+.wiz-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .12s;user-select:none}
+.wiz-card:hover{border-color:var(--blue);background:var(--blue-light)}
+.wiz-card.selected{border-color:var(--blue);background:var(--blue-light);box-shadow:0 0 0 2px var(--blue-mid)}
+.wiz-stp{display:flex;flex-direction:column;align-items:center;cursor:default;min-width:72px;padding-bottom:16px}
+.wiz-num{width:28px;height:28px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted2);background:var(--surface);transition:.2s}
+.wiz-lbl{font-size:11px;margin-top:4px;color:var(--muted2);text-align:center}
+.wiz-stp.active .wiz-num{background:var(--blue);border-color:var(--blue);color:#fff}
+.wiz-stp.active .wiz-lbl{color:var(--blue);font-weight:600}
+.wiz-stp.done .wiz-num{background:var(--green);border-color:var(--green);color:#fff}
+.wiz-stp.done .wiz-lbl{color:var(--green)}
+.wiz-line{flex:1;height:2px;background:var(--border);margin-top:14px;margin-bottom:28px}
 #supplier-view{display:none}
 @media(max-width:860px){.sidebar{display:none}.main{margin-left:0;padding:16px}.frow{grid-template-columns:1fr}.two-col{grid-template-columns:1fr}.stat-row{flex-direction:column}}
 </style>
@@ -378,6 +389,26 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
   <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('suplink')">Luk</button><button class="btn btn-green" onclick="markCtrSent()">✓ Markér som sendt</button></div>
 </div></div>
 
+<div class="overlay" id="ov-wiz">
+<div class="modal" style="max-width:700px;width:92vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">
+  <div class="mhead"><div class="mtitle" id="wiz-title">Ny kontrakt</div><button class="mclose" onclick="closeOv('wiz')">✕</button></div>
+  <div id="wiz-steps" style="display:flex;align-items:center;padding:16px 24px 0;border-bottom:1px solid var(--border)">
+    <div class="wiz-stp" id="wstp-1"><div class="wiz-num">1</div><div class="wiz-lbl">Leverandør</div></div>
+    <div class="wiz-line"></div>
+    <div class="wiz-stp" id="wstp-2"><div class="wiz-num">2</div><div class="wiz-lbl">Projekt</div></div>
+    <div class="wiz-line"></div>
+    <div class="wiz-stp" id="wstp-3"><div class="wiz-num">3</div><div class="wiz-lbl">Leverancer</div></div>
+  </div>
+  <div id="wiz-body" style="overflow-y:auto;flex:1;padding:20px 24px"></div>
+  <div class="mfooter">
+    <button class="btn btn-ghost" onclick="closeOv('wiz')">Annuller</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" id="wiz-prev" onclick="wizGo(_wiz.step-1)" style="display:none">← Tilbage</button>
+      <button class="btn btn-primary" id="wiz-next" onclick="wizNext()">Næste →</button>
+    </div>
+  </div>
+</div></div>
+
 <script type="module">
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 window.sb=createClient('https://guhbrpektblabndqttgp.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1aGJycGVrdGJsYWJuZHF0dGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MzgyOTEsImV4cCI6MjA4NDAxNDI5MX0.k2VbP5r3vCCJOsgefavapMFchC1fBerqoUKGDpe0E-M');
@@ -385,7 +416,7 @@ window.dispatchEvent(new Event('sb-ready'));
 </script>
 <script>
 const SK='neminventar_sup_v3',DV=1;
-const EMPTY={_version:1,projects:[],tasks:[],bids:[],contracts:[],suppliers:[],disputes:[],templateUrls:{}};
+const EMPTY={_version:1,projects:[],tasks:[],bids:[],contracts:[],suppliers:[],disputes:[],contractLines:[],templateUrls:{}};
 
 const PROJ_STATUS={
   active:   {label:'Aktiv',       color:'#2563eb',cls:'b-blue'},
@@ -432,18 +463,19 @@ function appOf(uuid){return uuid==null?null:(ID.toApp.get(uuid)||null);}
 
 async function initFromSupabase(){
   try{
-    const[proj,tasks,bids,ctr,sup,disp,sett]=await Promise.all([
+    const[proj,tasks,bids,ctr,sup,disp,lines,sett]=await Promise.all([
       sb.from('projects_2026_01_15_06_45').select('*'),
       sb.from('sp_tasks').select('*'),
       sb.from('sp_bids').select('*'),
       sb.from('sp_contracts').select('*'),
       sb.from('companies_2026_04_27').select('*').eq('is_supplier',true),
       sb.from('sp_disputes').select('*'),
+      sb.from('sp_contract_lines').select('*'),
       sb.from('sp_settings').select('*').eq('key','templateUrls').maybeSingle()
     ]);
-    for(const r of[proj,tasks,bids,ctr,sup,disp])if(r.error)throw r.error;
+    for(const r of[proj,tasks,bids,ctr,sup,disp,lines])if(r.error)throw r.error;
     const reg=rows=>(rows||[]).forEach(x=>regId(x.id,x.app_id||x.id));
-    reg(proj.data);reg(tasks.data);reg(bids.data);reg(ctr.data);reg(sup.data);reg(disp.data);
+    reg(proj.data);reg(tasks.data);reg(bids.data);reg(ctr.data);reg(sup.data);reg(disp.data);reg(lines.data);
     state={
       _version:1,
       projects:(proj.data||[]).map(r=>({id:r.app_id||r.id,num:r.project_number||'',name:r.name,client:r.customer||'',status:r.status||'active',budget:r.budget_amount||0,deadline:r.deadline||'',description:r.description||'',createdAt:r.created_at})),
@@ -452,6 +484,7 @@ async function initFromSupabase(){
       contracts:(ctr.data||[]).map(r=>({id:r.app_id||r.id,num:r.num||'',name:r.name,taskId:appOf(r.task_id),bidId:appOf(r.bid_id),supplierId:appOf(r.supplier_id),projectId:appOf(r.project_id),stage:r.stage||'invited',amount:r.amount||0,deadline:r.deadline||'',terms:r.terms||'',documents:r.documents||[],stageDates:r.stage_dates||{},linkSentAt:r.link_sent_at||null,createdAt:r.created_at})),
       suppliers:(sup.data||[]).map(r=>({id:r.app_id||r.id,name:r.name,country:r.country||'',cvr:r.cvr||'',cat:(Array.isArray(r.tags)&&r.tags[0])||'andet',cname:r.default_contact_name||'',email:r.default_contact_email||'',phone:r.default_contact_phone||'',notes:r.notes||''})),
       disputes:(disp.data||[]).map(r=>({id:r.app_id||r.id,title:r.title,supplierId:appOf(r.supplier_id),contractId:appOf(r.contract_id),severity:r.severity||'medium',status:r.status||'open',scope:r.scope||'other',description:r.description||'',createdAt:r.created_at,timeline:r.timeline||[]})),
+      contractLines:(lines.data||[]).map(r=>({id:r.app_id||r.id,contractId:appOf(r.contract_id),sortOrder:r.sort_order||0,sourceTable:r.source_table||'',sourceId:r.source_id||null,name:r.name||'',description:r.description||'',unit:r.unit||'',qty:r.qty||0,estUnitPrice:r.est_unit_price||0,supplierPrice:r.supplier_price||null,supplierNote:r.supplier_note||'',pricedAt:r.priced_at||null,createdAt:r.created_at})),
       templateUrls:(sett&&sett.data&&sett.data.value)||{}
     };
     _synced=JSON.parse(JSON.stringify(state));
@@ -469,6 +502,7 @@ const toTaskRow=t=>({app_id:t.id,num:t.num||'',project_id:ID.toUuid.get(t.projec
 const toBidRow=b=>({app_id:b.id,task_id:ID.toUuid.get(b.taskId)||null,supplier_id:ID.toUuid.get(b.supplierId)||null,amount:b.amount||0,note:b.note||'',submitted_at:b.submittedAt,status:b.status||'pending'});
 const toCtrRow=c=>({app_id:c.id,num:c.num||'',name:c.name,task_id:ID.toUuid.get(c.taskId)||null,bid_id:ID.toUuid.get(c.bidId)||null,supplier_id:ID.toUuid.get(c.supplierId)||null,project_id:ID.toUuid.get(c.projectId)||null,stage:c.stage||'invited',amount:c.amount||0,deadline:c.deadline||null,terms:c.terms||'',documents:c.documents||[],stage_dates:c.stageDates||{},link_sent_at:c.linkSentAt||null,created_at:c.createdAt});
 const toDispRow=d=>({app_id:d.id,title:d.title,supplier_id:ID.toUuid.get(d.supplierId)||null,contract_id:ID.toUuid.get(d.contractId)||null,severity:d.severity||'medium',status:d.status||'open',scope:d.scope||'other',description:d.description||'',created_at:d.createdAt,timeline:d.timeline||[]});
+const toLineRow=l=>({app_id:l.id,contract_id:ID.toUuid.get(l.contractId)||null,sort_order:l.sortOrder||0,source_table:l.sourceTable||'',source_id:l.sourceId||null,name:l.name||'',description:l.description||'',unit:l.unit||'',qty:l.qty||0,est_unit_price:l.estUnitPrice||0,supplier_price:l.supplierPrice||null,supplier_note:l.supplierNote||'',priced_at:l.pricedAt||null,created_at:l.createdAt});
 
 let _synced=null,_syncTimer=null,_syncing=false;
 function scheduleSync(){if(!window.sb)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(syncToSupabase,800);}
@@ -483,6 +517,7 @@ async function syncToSupabase(){
     await syncColl('tasks',snap.tasks,toTaskRow,'sp_tasks');
     await syncColl('bids',snap.bids,toBidRow,'sp_bids');
     await syncColl('contracts',snap.contracts,toCtrRow,'sp_contracts');
+    await syncColl('contractLines',snap.contractLines||[],toLineRow,'sp_contract_lines');
     await syncColl('disputes',snap.disputes,toDispRow,'sp_disputes');
     await syncSettings(snap.templateUrls);
     _synced=snap;
@@ -520,7 +555,7 @@ async function migrateLocalToSupabaseIfNeeded(){
     const{count}=await sb.from('sp_contracts').select('*',{count:'exact',head:true});
     if((count||0)===0){
       state=local;
-      _synced={projects:[],suppliers:[],tasks:[],bids:[],contracts:[],disputes:[]};
+      _synced={projects:[],suppliers:[],tasks:[],bids:[],contracts:[],disputes:[],contractLines:[]};
       await syncToSupabase();
     }
     localStorage.setItem('neminventar_migrated_v1','done');
@@ -957,18 +992,19 @@ function saveTmplUrls(){if(!state.templateUrls)state.templateUrls={};Object.keys
 
 // ── SUPPLIER LINK ──
 let _curLinkCid=null;
-function buildSupLink(cid){
-  const c=state.contracts.find(c=>c.id===cid);if(!c)return'';
-  const sup=state.suppliers.find(s=>s.id===c.supplierId)||{};
-  const task=state.tasks.find(t=>t.id===c.taskId)||{};
-  const proj=state.projects.find(p=>p.id===(task.projectId||c.projectId))||{};
-  const si=stageInfo(c.stage);
-  const stageIdx=CTR_STAGES.findIndex(s=>s.key===c.stage);
-  const docs=(c.documents||[]).map(d=>({name:d.name,status:d.status,signedUrl:d.signedUrl||'',templateUrl:(state.templateUrls||{})[d.templateKey]||'',file:d.templateKey&&TMPL[d.templateKey]?TMPL[d.templateKey].file:''}));
-  const data={num:c.num,name:c.name,project:proj.name||'',task:task.name||'',supplierName:sup.name||'',amount:c.amount||0,stage:si.label,stageIdx,deadline:c.deadline||'',terms:c.terms||'',docs,generatedAt:new Date().toISOString().split('T')[0]};
-  try{return window.location.origin+window.location.pathname+'#supplier/'+btoa(unescape(encodeURIComponent(JSON.stringify(data))));}catch(e){return'';}
+async function buildSupLink(cid){
+  const cUuid=ID.toUuid.get(cid);if(!cUuid)return'';
+  const{data,error}=await sb.from('sp_contract_tokens').insert({contract_id:cUuid}).select('token').single();
+  if(error)throw error;
+  return window.location.origin+window.location.pathname+'#p/'+data.token;
 }
-function openSupLink(cid){_curLinkCid=cid;document.getElementById('suplink-url').textContent=buildSupLink(cid);openOv('suplink');}
+async function openSupLink(cid){
+  _curLinkCid=cid;
+  const el=document.getElementById('suplink-url');
+  el.textContent='Genererer link...';
+  openOv('suplink');
+  try{el.textContent=await buildSupLink(cid);}catch(e){el.textContent='Fejl: '+e.message;}
+}
 function copySupLink(){navigator.clipboard?.writeText(document.getElementById('suplink-url').textContent).then(()=>alert('Kopieret!'));}
 function previewSupLink(){window.open(document.getElementById('suplink-url').textContent,'_blank');}
 function markCtrSent(){
@@ -1020,6 +1056,299 @@ function renderSupplierView(data){
   </div>`;
 }
 
+// ── TOKEN-BASED SUPPLIER PORTAL ──
+async function renderSupplierPortal(token){
+  document.getElementById('admin-app').style.display='none';
+  const sv=document.getElementById('supplier-view');
+  sv.style.display='block';
+  document.title='Leverandørportal – NemInventar';
+  sv.innerHTML='<div style="background:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif"><div style="text-align:center;color:#64748b;font-size:14px">⏳ Indlæser portal...</div></div>';
+  try{
+    const{data:tok,error:te}=await sb.from('sp_contract_tokens').select('*,sp_contracts(*)').eq('token',token).eq('status','active').maybeSingle();
+    if(te||!tok)throw new Error('Ugyldigt eller udløbet link');
+    await sb.from('sp_contract_tokens').update({last_seen_at:new Date().toISOString()}).eq('token',token);
+    const c=tok.sp_contracts;
+    const[{data:lns},{data:sup},{data:prj}]=await Promise.all([
+      sb.from('sp_contract_lines').select('*').eq('contract_id',c.id).order('sort_order'),
+      sb.from('companies_2026_04_27').select('name,default_contact_name,default_contact_email').eq('id',c.supplier_id).maybeSingle(),
+      sb.from('projects_2026_01_15_06_45').select('name,project_number').eq('id',c.project_id).maybeSingle()
+    ]);
+    renderPortalHTML(token,c,lns||[],sup,prj);
+  }catch(e){
+    sv.innerHTML=`<div style="background:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif"><div style="background:#fff;border-radius:14px;padding:40px;text-align:center;max-width:420px;box-shadow:0 4px 24px rgba(0,0,0,.1)"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px">Link ikke tilgængeligt</div><div style="font-size:13px;color:#64748b">${esc(e.message)}</div><div style="margin-top:16px;font-size:12px;color:#94a3b8">Kontakt venligst <a href="mailto:kontakt@neminventar.dk" style="color:#2563eb">kontakt@neminventar.dk</a></div></div></div>`;
+  }
+}
+
+function renderPortalHTML(token,c,lines,sup,prj){
+  const sv=document.getElementById('supplier-view');
+  const si=CTR_STAGES.find(s=>s.key===c.stage)||CTR_STAGES[0];
+  const already=lines.some(l=>l.supplier_price!=null);
+  const linesHtml=lines.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
+      <th style="padding:10px 14px;text-align:left;font-weight:600;color:#475569">Opgave / Leverance</th>
+      <th style="padding:10px 14px;text-align:right;width:70px;color:#475569">Antal</th>
+      <th style="padding:10px 14px;text-align:left;width:65px;color:#475569">Enhed</th>
+      <th style="padding:10px 14px;text-align:right;width:140px;color:#475569">Din pris (DKK)</th>
+      <th style="padding:10px 14px;text-align:left;width:180px;color:#475569">Note</th>
+    </tr></thead>
+    <tbody>${lines.map((l,i)=>`<tr data-line-id="${l.id}" style="border-bottom:1px solid #f1f5f9${i%2?';background:#fafafa':''}">
+      <td style="padding:10px 14px"><div style="font-weight:600;color:#0f172a">${esc(l.name)}</div>${l.description?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">${esc(l.description)}</div>`:''}${l.est_unit_price?`<div style="font-size:11px;color:#64748b;margin-top:2px">Estimat: ${Number(l.est_unit_price).toLocaleString('da-DK')} kr/enhed</div>`:''}</td>
+      <td style="padding:10px 14px;text-align:right;color:#475569">${l.qty||''}</td>
+      <td style="padding:10px 14px;color:#475569">${esc(l.unit||'')}</td>
+      <td style="padding:10px 14px"><input class="price-input" type="number" min="0" step="0.01" value="${l.supplier_price!=null?l.supplier_price:''}" placeholder="0.00" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 9px;font-size:13px;text-align:right;outline:none" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'"></td>
+      <td style="padding:10px 14px"><input class="note-input" type="text" value="${esc(l.supplier_note||'')}" placeholder="Evt. bemærkning" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 9px;font-size:13px;outline:none" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'"></td>
+    </tr>`).join('')}</tbody>
+  </table></div>
+  <div style="padding:16px 24px;display:flex;align-items:center;justify-content:flex-end;gap:12px;border-top:1px solid #f1f5f9">
+    ${already?'<span style="font-size:12px;color:#16a34a;font-weight:600">✓ Priser allerede indsendt – du kan opdatere</span>':''}
+    <button id="portal-submit-btn" onclick="submitSupplierPrices('${esc(token)}')" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:11px 26px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">📤 Indsend priser</button>
+  </div>`:'<div style="padding:24px;color:#94a3b8;font-size:13px;font-style:italic;text-align:center">Ingen opgaver er tilknyttet denne kontrakt endnu</div>';
+  sv.innerHTML=`<div style="background:#f1f5f9;min-height:100vh;padding:32px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif">
+    <div style="max-width:860px;margin:0 auto">
+      <div style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;border-radius:16px 16px 0 0;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:3px">🤝 NemInventar ApS</div>
+          <div style="font-size:13px;opacity:.8">Leverandørportal · ${esc(sup?.name||'')}</div>
+        </div>
+        <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px 16px;text-align:right">
+          <div style="font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:.06em">Status</div>
+          <div style="font-size:13px;font-weight:700">${esc(si.label)}</div>
+        </div>
+      </div>
+      <div style="background:#fff;padding:20px 32px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+          ${[['Kontrakt',(c.num?c.num+' · ':'')+c.name],['Projekt',prj?.name||'–'],['Beløb',c.amount?Number(c.amount).toLocaleString('da-DK')+' kr.':'–'],['Deadline',c.deadline?fmtD(c.deadline):'–']].map(([k,v])=>`<div style="background:#f8fafc;border-radius:8px;padding:12px 14px"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">${k}</div><div style="font-size:13px;font-weight:600;color:#0f172a;word-break:break-word">${esc(v)}</div></div>`).join('')}
+        </div>
+        ${c.terms?`<div style="margin-top:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:13px;color:#475569;line-height:1.7;white-space:pre-wrap">${esc(c.terms)}</div>`:''}
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-top:2px solid #e2e8f0;border-radius:0 0 16px 16px">
+        <div style="padding:16px 32px 12px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em">Opgaver & prissætning</div>
+          <div style="font-size:12px;color:#64748b">${lines.length} ${lines.length===1?'opgave':'opgaver'}</div>
+        </div>
+        ${linesHtml}
+      </div>
+      <div style="text-align:center;margin-top:18px;font-size:11px;color:#94a3b8">NemInventar ApS · <a href="mailto:kontakt@neminventar.dk" style="color:#64748b">kontakt@neminventar.dk</a> · Personligt leverandørlink</div>
+    </div>
+  </div>`;
+}
+
+async function submitSupplierPrices(token){
+  const btn=document.getElementById('portal-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Sender...';}
+  try{
+    const now=new Date().toISOString();
+    const rows=document.querySelectorAll('[data-line-id]');
+    for(const row of rows){
+      const id=row.dataset.lineId;
+      const price=parseFloat(row.querySelector('.price-input').value);
+      const note=row.querySelector('.note-input').value.trim();
+      if(!isNaN(price)){
+        const{error}=await sb.from('sp_contract_lines').update({supplier_price:price,supplier_note:note||null,priced_at:now}).eq('id',id);
+        if(error)throw error;
+      }
+    }
+    await sb.from('sp_contract_tokens').update({submitted_at:now}).eq('token',token);
+    if(btn){btn.disabled=false;btn.style.background='#16a34a';btn.onmouseover=null;btn.onmouseout=null;btn.textContent='✓ Priser modtaget!';}
+    const toast=document.createElement('div');
+    toast.style.cssText='position:fixed;bottom:24px;right:24px;background:#16a34a;color:#fff;padding:14px 22px;border-radius:10px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:fadeIn .3s';
+    toast.textContent='✓ Dine priser er modtaget af NemInventar!';
+    document.body.appendChild(toast);
+    setTimeout(()=>toast.remove(),5000);
+  }catch(e){
+    alert('Fejl ved indsendelse: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='📤 Indsend priser';}
+  }
+}
+
+// ── CLM WIZARD ──
+let _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'tasks',_erpItems:[]};
+
+function openCtrWizard(){
+  _wiz={step:1,supplierId:'',projectId:'',items:[],contractName:'',_src:'tasks',_erpItems:[]};
+  wizRender();
+  openOv('wiz');
+}
+
+function wizRender(){
+  const s=_wiz.step;
+  [1,2,3].forEach(i=>{const el=document.getElementById('wstp-'+i);if(el)el.className='wiz-stp'+(i===s?' active':i<s?' done':'');});
+  const prev=document.getElementById('wiz-prev');const nxt=document.getElementById('wiz-next');
+  if(prev)prev.style.display=s>1?'':'none';
+  if(nxt)nxt.textContent=s===3?'Gem kontrakt':'Næste →';
+  const body=document.getElementById('wiz-body');
+  if(!body)return;
+  if(s===1){
+    body.innerHTML=`<div style="margin-bottom:12px"><input class="fi" id="wiz-sup-search" placeholder="🔍 Søg leverandør..." oninput="wizFilterSups()" style="width:100%"></div>
+    <div id="wiz-sup-list" style="display:grid;gap:8px;max-height:360px;overflow-y:auto">
+      ${state.suppliers.map(sup=>`<div class="wiz-card${sup.id===_wiz.supplierId?' selected':''}" onclick="wizSelSup('${sup.id}')" data-name="${esc(sup.name.toLowerCase())}">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:22px;width:32px;text-align:center">${CAT_ICON[sup.cat]||'📦'}</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px;color:#0f172a">${esc(sup.name)}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px">${esc(sup.cat||'')}${sup.country?' · '+esc(sup.country):''}${sup.cvr?' · CVR '+esc(sup.cvr):''}</div>
+          </div>
+          ${sup.id===_wiz.supplierId?'<span style="color:#2563eb;font-size:16px;font-weight:700">✓</span>':''}
+        </div>
+      </div>`).join('')||'<div style="color:#94a3b8;text-align:center;padding:28px;font-size:13px">Ingen leverandører fundet</div>'}
+    </div>`;
+  }else if(s===2){
+    const sup=state.suppliers.find(x=>x.id===_wiz.supplierId);
+    body.innerHTML=`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#1d4ed8"><b>Leverandør:</b> ${esc(sup?.name||'')}</div>
+    <div style="display:grid;gap:8px;max-height:380px;overflow-y:auto">
+      ${state.projects.filter(p=>p.status!=='completed').map(p=>`<div class="wiz-card${p.id===_wiz.projectId?' selected':''}" onclick="wizSelProj('${p.id}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px;color:#0f172a">${esc(p.name)}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px">${esc(p.num||'')}${p.client?' · '+esc(p.client):''}${p.status?' · '+(PROJ_STATUS[p.status]?.label||p.status):''}</div>
+          </div>
+          ${p.id===_wiz.projectId?'<span style="color:#2563eb;font-size:16px;font-weight:700">✓</span>':''}
+        </div>
+      </div>`).join('')||'<div style="color:#94a3b8;text-align:center;padding:28px;font-size:13px">Ingen aktive projekter</div>'}
+    </div>`;
+  }else{
+    const sup=state.suppliers.find(x=>x.id===_wiz.supplierId);
+    const proj=state.projects.find(x=>x.id===_wiz.projectId);
+    const tasks=state.tasks.filter(t=>t.projectId===_wiz.projectId);
+    if(!_wiz.contractName)_wiz.contractName=(proj?proj.name+' – ':'')+sup?.name||'';
+    body.innerHTML=`<div style="display:flex;gap:8px;background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#475569">
+      <span>📦 <b>${esc(sup?.name||'')}</b></span><span style="color:#cbd5e1">·</span><span>📂 <b>${esc(proj?.name||'')}</b></span>
+    </div>
+    <div class="fg" style="margin-bottom:14px"><label class="fl">Kontraktnavn *</label>
+      <input class="fi" id="wiz-name" value="${esc(_wiz.contractName)}" oninput="_wiz.contractName=this.value">
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button class="btn btn-sm" id="wbtn-tasks" onclick="wizSetSrc('tasks')" style="background:${_wiz._src==='tasks'?'#2563eb':'#f1f5f9'};color:${_wiz._src==='tasks'?'#fff':'#475569'};border:1px solid #e2e8f0">Opgaver (${tasks.length})</button>
+      <button class="btn btn-sm" id="wbtn-prods" onclick="wizSetSrc('prods')" style="background:${_wiz._src==='prods'?'#2563eb':'#f1f5f9'};color:${_wiz._src==='prods'?'#fff':'#475569'};border:1px solid #e2e8f0">ERP Produkter</button>
+      <button class="btn btn-sm" id="wbtn-mats" onclick="wizSetSrc('mats')" style="background:${_wiz._src==='mats'?'#2563eb':'#f1f5f9'};color:${_wiz._src==='mats'?'#fff':'#475569'};border:1px solid #e2e8f0">ERP Materialer</button>
+    </div>
+    <div id="wiz-items-list" style="max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px">
+      ${wizItemsHtml(_wiz._src==='tasks'?tasks:_wiz._erpItems)}
+    </div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:8px">${_wiz.items.length} element(er) valgt</div>`;
+    if(_wiz._src!=='tasks'&&!_wiz._erpItems.length)wizLoadItems(_wiz._src);
+  }
+}
+
+function wizItemsHtml(items){
+  if(!items||!items.length)return'<div style="padding:24px;color:#94a3b8;text-align:center;font-size:13px">Ingen elementer tilgængelige</div>';
+  return items.map((it,i)=>{
+    const id=it.id||it._id||'';
+    const sel=_wiz.items.some(x=>x._id===id);
+    const si=_wiz.items.find(x=>x._id===id)||{};
+    const nm=esc(it.name||'');const un=esc(it.unit||'');const dsc=esc(it.description||'');
+    const qty=it.qty||'';const ep=it.est_unit_price||it.estimatedAmount||it.unit_price||0;
+    return`<div style="padding:10px 14px;border-bottom:1px solid #f1f5f9;display:flex;align-items:flex-start;gap:10px${i%2?';background:#fafafa':''}">
+      <input type="checkbox" ${sel?'checked':''} onchange="wizToggle('${id}','${nm}','${un}','${qty}','${ep}','${dsc}')" style="margin-top:3px;width:16px;height:16px;cursor:pointer;flex-shrink:0">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:#0f172a">${nm}</div>
+        ${it.description?`<div style="font-size:11px;color:#94a3b8;margin-top:1px">${dsc}</div>`:''}
+        ${qty||it.unit?`<div style="font-size:11px;color:#64748b;margin-top:1px">${qty?qty+' ':''}${un}</div>`:''}
+        ${ep?`<div style="font-size:11px;color:#64748b">Estimeret pris: ${Number(ep).toLocaleString('da-DK')} kr/enhed</div>`:''}
+      </div>
+      ${sel?`<input type="number" value="${si.estUnitPrice||''}" placeholder="Estimat kr" onchange="wizSetPrice('${id}',this.value)" style="width:110px;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:12px;flex-shrink:0" min="0">`:'' }
+    </div>`;
+  }).join('');
+}
+
+async function wizLoadItems(src){
+  const list=document.getElementById('wiz-items-list');
+  if(!list)return;
+  list.innerHTML='<div style="padding:24px;color:#94a3b8;text-align:center;font-size:13px">⏳ Henter fra ERP...</div>';
+  try{
+    const pid=ID.toUuid.get(_wiz.projectId);
+    let items=[];
+    if(src==='prods'&&pid){
+      const{data,error}=await sb.from('project_products_2026_01_15_12_49').select('id,name,description,unit,qty').eq('project_id',pid);
+      if(error)throw error;
+      items=(data||[]).map(r=>({id:r.id,name:r.name||'',description:r.description||'',unit:r.unit||'',qty:r.qty||'',est_unit_price:0}));
+    }else if(src==='mats'&&pid){
+      const{data,error}=await sb.from('project_materials_2026_01_15_06_45').select('id,name,description,unit,qty,unit_price').eq('project_id',pid);
+      if(error)throw error;
+      items=(data||[]).map(r=>({id:r.id,name:r.name||'',description:r.description||'',unit:r.unit||'',qty:r.qty||'',est_unit_price:r.unit_price||0}));
+    }
+    _wiz._erpItems=items;
+    list.innerHTML=wizItemsHtml(items);
+  }catch(e){list.innerHTML=`<div style="padding:24px;color:#dc2626;text-align:center;font-size:13px">Fejl: ${esc(e.message)}</div>`;}
+}
+
+function wizSetSrc(src){
+  _wiz._src=src;
+  ['tasks','prods','mats'].forEach(s=>{const b=document.getElementById('wbtn-'+s);if(b){b.style.background=s===src?'#2563eb':'#f1f5f9';b.style.color=s===src?'#fff':'#475569';}});
+  if(src==='tasks'){
+    const tasks=state.tasks.filter(t=>t.projectId===_wiz.projectId);
+    const list=document.getElementById('wiz-items-list');
+    if(list)list.innerHTML=wizItemsHtml(tasks);
+  }else if(!_wiz._erpItems.length||_wiz._lastERP!==src){
+    _wiz._lastERP=src;
+    wizLoadItems(src);
+  }else{
+    const list=document.getElementById('wiz-items-list');
+    if(list)list.innerHTML=wizItemsHtml(_wiz._erpItems);
+  }
+  const cnt=document.querySelector('#wiz-body div[style*="element(er) valgt"]');
+  if(cnt)cnt.textContent=_wiz.items.length+' element(er) valgt';
+}
+
+function wizToggle(itemId,name,unit,qty,estPrice,desc){
+  const idx=_wiz.items.findIndex(x=>x._id===itemId);
+  if(idx>=0){_wiz.items.splice(idx,1);}else{_wiz.items.push({_id:itemId,name,unit,qty,estUnitPrice:parseFloat(estPrice)||0,description:desc,sourceTable:_wiz._src});}
+  const src=_wiz._src||'tasks';
+  const items=src==='tasks'?state.tasks.filter(t=>t.projectId===_wiz.projectId):_wiz._erpItems;
+  const list=document.getElementById('wiz-items-list');
+  if(list)list.innerHTML=wizItemsHtml(items);
+  const cnt=document.querySelector('#wiz-body div[style*="element(er) valgt"]');
+  if(cnt)cnt.textContent=_wiz.items.length+' element(er) valgt';
+}
+
+function wizSetPrice(itemId,val){
+  const item=_wiz.items.find(x=>x._id===itemId);
+  if(item)item.estUnitPrice=parseFloat(val)||0;
+}
+
+function wizFilterSups(){
+  const q=(document.getElementById('wiz-sup-search')?.value||'').toLowerCase();
+  document.querySelectorAll('#wiz-sup-list [data-name]').forEach(el=>{el.style.display=el.dataset.name.includes(q)?'':'none';});
+}
+
+function wizSelSup(id){_wiz.supplierId=id;wizRender();}
+function wizSelProj(id){_wiz.projectId=id;_wiz._erpItems=[];_wiz._lastERP='';wizRender();}
+
+function wizNext(){
+  if(_wiz.step===1){
+    if(!_wiz.supplierId){alert('Vælg en leverandør for at fortsætte');return;}
+    wizGo(2);
+  }else if(_wiz.step===2){
+    if(!_wiz.projectId){alert('Vælg et projekt for at fortsætte');return;}
+    wizGo(3);
+  }else{
+    saveWizard();
+  }
+}
+
+function wizGo(step){
+  if(step<1||step>3)return;
+  _wiz.step=step;
+  wizRender();
+}
+
+function saveWizard(){
+  const nameEl=document.getElementById('wiz-name');
+  const name=(nameEl?nameEl.value:_wiz.contractName).trim();
+  if(!name){alert('Kontraktnavn påkrævet');return;}
+  if(!_wiz.supplierId){alert('Vælg leverandør');return;}
+  const cid=genId();
+  const c={id:cid,num:nextCtrNum(),name,taskId:null,bidId:null,supplierId:_wiz.supplierId,projectId:_wiz.projectId||null,stage:'draft',amount:0,deadline:'',terms:'',documents:[],stageDates:{},linkSentAt:null,createdAt:new Date().toISOString().split('T')[0]};
+  state.contracts.push(c);
+  const newLines=_wiz.items.map((it,i)=>({id:genId(),contractId:cid,sortOrder:i,sourceTable:it.sourceTable||'',sourceId:it._id&&!String(it._id).startsWith('_')?it._id:null,name:it.name,description:it.description||'',unit:it.unit||'',qty:parseFloat(it.qty)||0,estUnitPrice:it.estUnitPrice||0,supplierPrice:null,supplierNote:'',pricedAt:null,createdAt:new Date().toISOString().split('T')[0]}));
+  state.contractLines=[...state.contractLines,...newLines];
+  sv();
+  closeOv('wiz');
+  showContractDetail(cid,'kontrakter');
+}
+
+function openNewCtr(){openCtrWizard();}
+
 // ── MODALS ──
 function openOv(n){document.getElementById('ov-'+n).classList.add('open');}
 function closeOv(n){document.getElementById('ov-'+n).classList.remove('open');}
@@ -1028,7 +1357,7 @@ function fillSupSel(el,selId){el.innerHTML='<option value="">– Vælg leverand�
 
 function openNewProj(){['mp-id','mp-name','mp-client','mp-budget','mp-dead','mp-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('mp-title').textContent='Nyt projekt';document.getElementById('mp-status').value='active';openOv('proj');}
 function openEditProj(id){const p=state.projects.find(p=>p.id===id);if(!p)return;document.getElementById('mp-title').textContent='Rediger projekt';document.getElementById('mp-id').value=id;document.getElementById('mp-name').value=p.name||'';document.getElementById('mp-client').value=p.client||'';document.getElementById('mp-status').value=p.status||'active';document.getElementById('mp-budget').value=p.budget||'';document.getElementById('mp-dead').value=p.deadline||'';document.getElementById('mp-desc').value=p.description||'';openOv('proj');}
-function deleteProj(id){if(!confirm('Slet projekt og al tilknyttet data?'))return;const tasks=state.tasks.filter(t=>t.projectId===id);state.tasks=state.tasks.filter(t=>t.projectId!==id);state.bids=state.bids.filter(b=>!tasks.some(t=>t.id===b.taskId));state.contracts=state.contracts.filter(c=>c.projectId!==id);state.projects=state.projects.filter(p=>p.id!==id);sv();nav('projekter');}
+function deleteProj(id){if(!confirm('Slet projekt og al tilknyttet data?'))return;const tasks=state.tasks.filter(t=>t.projectId===id);const ctrs=state.contracts.filter(c=>c.projectId===id);state.tasks=state.tasks.filter(t=>t.projectId!==id);state.bids=state.bids.filter(b=>!tasks.some(t=>t.id===b.taskId));state.contractLines=state.contractLines.filter(l=>!ctrs.some(c=>c.id===l.contractId));state.contracts=state.contracts.filter(c=>c.projectId!==id);state.projects=state.projects.filter(p=>p.id!==id);sv();nav('projekter');}
 function saveProj(){const id=document.getElementById('mp-id').value;const name=document.getElementById('mp-name').value.trim();if(!name){alert('Projektnavn påkrævet');return;}const ex=id?state.projects.find(p=>p.id===id):null;const data={id:id||genId(),num:ex?ex.num:nextProjNum(),name,client:document.getElementById('mp-client').value.trim(),status:document.getElementById('mp-status').value,budget:parseFloat(document.getElementById('mp-budget').value)||0,deadline:document.getElementById('mp-dead').value,description:document.getElementById('mp-desc').value.trim(),createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.projects.findIndex(p=>p.id===id);if(i>=0)state.projects[i]=data;}else state.projects.push(data);sv();closeOv('proj');renderProj();}
 
 function openNewTask(pid){['mt-id','mt-name','mt-desc','mt-unit','mt-est','mt-qty'].forEach(id=>document.getElementById(id).value='');document.getElementById('mt-title').textContent='Tilføj opgave';document.getElementById('mt-projid').value=pid;openOv('task');}
@@ -1056,7 +1385,7 @@ function openNewCtr(){
 }
 function openNewCtrFromBid(tid,bidId){const t=state.tasks.find(t=>t.id===tid)||{};const b=state.bids.find(b=>b.id===bidId)||{};const proj=state.projects.find(p=>p.id===t.projectId)||{};document.getElementById('mc-title').textContent='Opret kontrakt';document.getElementById('mc-id').value='';document.getElementById('mc-taskid').value=tid;document.getElementById('mc-bidid').value=bidId||'';document.getElementById('mc-name').value=(proj.name?proj.name+' – ':'')+t.name||'Ny kontrakt';document.getElementById('mc-stage').value='accepted';document.getElementById('mc-amount').value=b.amount||'';document.getElementById('mc-dead').value='';document.getElementById('mc-terms').value='';_fillCtrSelects(b.supplierId||'',t.projectId||'');openOv('ctr');}
 function openEditCtr(id){const c=state.contracts.find(c=>c.id===id);if(!c)return;document.getElementById('mc-title').textContent='Rediger kontrakt';document.getElementById('mc-id').value=id;document.getElementById('mc-taskid').value=c.taskId||'';document.getElementById('mc-bidid').value=c.bidId||'';document.getElementById('mc-name').value=c.name||'';document.getElementById('mc-stage').value=c.stage||'draft';document.getElementById('mc-amount').value=c.amount||'';document.getElementById('mc-dead').value=c.deadline||'';document.getElementById('mc-terms').value=c.terms||'';_fillCtrSelects(c.supplierId||'',c.projectId||'');openOv('ctr');}
-function delCtr(id){if(!confirm('Slet kontrakt?'))return;state.contracts=state.contracts.filter(c=>c.id!==id);sv();nav('kontrakter');}
+function delCtr(id){if(!confirm('Slet kontrakt?'))return;state.contractLines=state.contractLines.filter(l=>l.contractId!==id);state.contracts=state.contracts.filter(c=>c.id!==id);sv();nav('kontrakter');}
 function saveCtr(){const id=document.getElementById('mc-id').value;const name=document.getElementById('mc-name').value.trim();if(!name){alert('Kontraktnavn påkrævet');return;}const tid=document.getElementById('mc-taskid').value;const bidId=document.getElementById('mc-bidid').value;const task=state.tasks.find(t=>t.id===tid);const bid=state.bids.find(b=>b.id===bidId);const ex=id?state.contracts.find(c=>c.id===id):null;const supId=document.getElementById('mc-sup').value||(bid?bid.supplierId:'')|| (ex?ex.supplierId:'');const projId=document.getElementById('mc-proj-sel').value||(task?task.projectId:'')|| (ex?ex.projectId:'');if(!supId){alert('Leverandør påkrævet');return;}const data={id:id||genId(),num:ex?ex.num:nextCtrNum(),name,taskId:tid||null,bidId:bidId||null,supplierId:supId,projectId:projId||null,stage:document.getElementById('mc-stage').value,amount:parseFloat(document.getElementById('mc-amount').value)||0,deadline:document.getElementById('mc-dead').value,terms:document.getElementById('mc-terms').value.trim(),documents:ex?ex.documents||[]:[],stageDates:ex?ex.stageDates||{}:{},linkSentAt:ex?ex.linkSentAt||null:null,createdAt:ex?ex.createdAt:new Date().toISOString().split('T')[0]};if(id){const i=state.contracts.findIndex(c=>c.id===id);if(i>=0)state.contracts[i]=data;}else state.contracts.push(data);sv();closeOv('ctr');if(tid)showTaskDetail(tid,_taskProjId);else showContractDetail(data.id,_ctrBack);}
 
 function openNewDoc(cid){document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value='';['dd-name','dd-url','dd-sdate'].forEach(id=>document.getElementById(id).value='');document.getElementById('dd-tmpl').value='';document.getElementById('dd-status').value='template';openOv('doc');}
@@ -1079,6 +1408,7 @@ function saveDNote(){const id=document.getElementById('dn-id').value;const text=
 
 window.addEventListener('sb-ready',async function(){
   const hash=window.location.hash;
+  if(hash.startsWith('#p/')){renderSupplierPortal(hash.slice(3));return;}
   if(hash.startsWith('#supplier/')){
     try{renderSupplierView(JSON.parse(decodeURIComponent(escape(atob(hash.slice('#supplier/'.length))))));return;}catch(e){}
   }
