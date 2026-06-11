@@ -1360,6 +1360,38 @@ function renderSupplierView(data){
   </div>`;
 }
 
+// ── ERP MATERIAL SUMMARY (lazy-loaded on line expand) ──
+async function loadLineMaterials(lineId,sourceId){
+  if(!sourceId||!lineId)return;
+  const el=document.getElementById('mat-'+lineId);
+  if(!el||el.dataset.loaded)return;
+  el.dataset.loaded='1';
+  el.innerHTML='<div style="font-size:12px;color:#94a3b8;padding:6px 0">Henter materialer…</div>';
+  try{
+    const{data:items,error:ie}=await sb.from('project_quote_line_items_2026_01_16_23_00')
+      .select('id,title,qty,unit,project_product_id')
+      .eq('project_quote_line_id',sourceId);
+    if(ie||!items||!items.length){el.innerHTML='';return;}
+    const productIds=[...new Set(items.filter(i=>i.project_product_id).map(i=>i.project_product_id))];
+    let matMap={};
+    if(productIds.length){
+      const{data:mats}=await sb.from('project_product_material_lines_2026_01_15_12_49')
+        .select('project_product_id,line_title,qty,unit,sort_order')
+        .in('project_product_id',productIds)
+        .order('sort_order');
+      (mats||[]).forEach(m=>{if(!matMap[m.project_product_id])matMap[m.project_product_id]=[];matMap[m.project_product_id].push(m);});
+    }
+    const html=items.map(item=>{
+      const mLines=item.project_product_id?(matMap[item.project_product_id]||[]):[];
+      const matHtml=mLines.length?`<div style="margin-top:4px;padding-left:12px;border-left:2px solid #bfdbfe">${mLines.map(m=>`<div style="display:flex;gap:8px;font-size:11px;color:#475569;padding:2px 0"><span style="flex:1">${esc(m.line_title||'')}</span><span style="white-space:nowrap;color:#334155;font-weight:500">${parseFloat(m.qty||0).toLocaleString('da-DK',{maximumFractionDigits:3})} ${esc(m.unit||'')}</span></div>`).join('')}</div>`:'';
+      return`<div style="padding:6px 0;border-bottom:1px solid #dbeafe"><div style="display:flex;gap:8px;font-size:12px"><span style="flex:1;font-weight:600;color:#1e40af">${esc(item.title||'')}</span><span style="white-space:nowrap;color:#475569">${parseFloat(item.qty||0).toLocaleString('da-DK',{maximumFractionDigits:2})} ${esc(item.unit||'')}</span></div>${matHtml}</div>`;
+    }).join('');
+    el.innerHTML=`<div style="margin-top:10px;border-top:1px solid #bfdbfe;padding-top:10px"><div style="font-size:10px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">📦 Materialer & komponenter (ERP)</div><div>${html}</div></div>`;
+  }catch(e){
+    el.innerHTML='<div style="font-size:12px;color:#ef4444;padding:4px 0">Kunne ikke hente materialer</div>';
+  }
+}
+
 // ── TOKEN-BASED SUPPLIER PORTAL ──
 async function renderSupplierPortal(token){
   document.getElementById('admin-app').style.display='none';
@@ -1408,8 +1440,15 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
   }).join(`<div style="flex:1;height:2px;background:#e2e8f0;margin-top:13px;align-self:flex-start"></div>`);
 
   // ── documents (contract-specific) ──
-  const docRows=docs.filter(d=>d.signedUrl||d.url||d.file).map(d=>{
-    const href=d.signedUrl||d.url||d.file||'#';
+  // Build templateKey→file_url map from uploaded templates
+  const tmplKeyUrl={};
+  (tmpls||[]).forEach(t=>{if(!t.file_url||!t.file_name)return;Object.keys(TMPL).forEach(k=>{if(t.file_name===TMPL[k].file)tmplKeyUrl[k]=t.file_url;});});
+  const usedTmplUrls=new Set();
+  const docRows=docs.map(d=>{
+    let href=d.signedUrl||d.url||d.file||'';
+    if(!href&&d.templateKey&&tmplKeyUrl[d.templateKey])href=tmplKeyUrl[d.templateKey];
+    if(!href)return null;
+    usedTmplUrls.add(href);
     const ext=(href.split('.').pop()||'').toLowerCase().split('?')[0];
     const icon={pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',png:'🖼',jpg:'🖼',jpeg:'🖼'}[ext]||'📎';
     return`<a href="${href}" target="_blank" rel="noopener" download style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;text-decoration:none;transition:background .15s" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#f8fafc'">
@@ -1417,10 +1456,10 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
       <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.name||href.split('/').pop())}</div><div style="font-size:11px;color:#64748b;margin-top:2px">${ext.toUpperCase()||'Dokument'} · Klik for at hente</div></div>
       <span style="font-size:18px;color:#2563eb">⬇</span>
     </a>`;
-  }).join('');
+  }).filter(Boolean).join('');
 
-  // ── templates ──
-  const tmplRows=(tmpls||[]).filter(t=>t.file_url).map(t=>{
+  // ── templates (exclude docs already shown above) ──
+  const tmplRows=(tmpls||[]).filter(t=>t.file_url&&!usedTmplUrls.has(t.file_url)).map(t=>{
     const ext=(t.file_name||'').split('.').pop().toLowerCase();
     const icon={pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',png:'🖼',jpg:'🖼'}[ext]||'📎';
     const sz=t.file_size>0?` · ${t.file_size>1048576?(t.file_size/1048576).toFixed(1)+' MB':(Math.round(t.file_size/1024)||1)+' KB'}`:'';
@@ -1448,7 +1487,7 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
       <th style="padding:10px 14px;text-align:left;width:60px;color:#475569">Enhed</th>
       ${canPrice?`<th style="padding:10px 14px;text-align:right;width:130px;color:#475569">Din pris (DKK)</th><th style="padding:10px 14px;text-align:left;width:170px;color:#475569">Note</th>`:`<th style="padding:10px 14px;text-align:right;width:130px;color:#475569">Aftalt pris</th>`}
     </tr></thead>
-    <tbody>${lines.map((l,i)=>`<tr data-line-id="${l.id}" style="border-bottom:1px solid #f1f5f9${i%2?';background:#fafafa':''};cursor:pointer" onclick="(function(r){var d=r.nextElementSibling;d.style.display=d.style.display==='table-row'?'none':'table-row';var a=r.querySelector('.det-arr');if(a)a.textContent=d.style.display==='table-row'?'▲':'▼'})(this)">
+    <tbody>${lines.map((l,i)=>`<tr data-line-id="${l.id}" style="border-bottom:1px solid #f1f5f9${i%2?';background:#fafafa':''};cursor:pointer" onclick="(function(r,sid){var d=r.nextElementSibling;var show=d.style.display!=='table-row';d.style.display=show?'table-row':'none';var a=r.querySelector('.det-arr');if(a)a.textContent=show?'▲':'▼';if(show&&sid)loadLineMaterials(r.dataset.lineId,sid);})(this,'${l.source_id||''}')">
       <td style="padding:10px 14px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
           <div style="flex:1;min-width:0"><div style="font-weight:600;color:#0f172a">${esc(l.name)}</div>${l.description?`<div style="font-size:12px;color:#475569;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.description)}</div>`:''}</div>
@@ -1466,6 +1505,7 @@ function renderPortalHTML(token,c,lines,sup,prj,tmpls){
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${l.qty?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px"><span style="color:#64748b">Antal:</span> <strong>${l.qty}${l.unit?' '+esc(l.unit):''}</strong></div>`:''}${l.location?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px">📍 <strong>${esc(l.location)}</strong></div>`:''}${l.drawing_ref?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px">📐 <strong>${esc(l.drawing_ref)}</strong></div>`:''}${l.start_date||l.end_date?`<div style="font-size:12px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 10px">📅 <strong>${l.start_date?fmtD(l.start_date):''}${l.start_date&&l.end_date?' → ':''}${l.end_date?fmtD(l.end_date):''}</strong></div>`:''}</div>
         ${l.specifications?`<div style="font-size:12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px">Tekniske specifikationer</div><div style="color:#334155;line-height:1.6;white-space:pre-wrap">${esc(l.specifications)}</div></div>`:''}
         ${l.acceptance_criteria?`<div style="font-size:12px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 12px"><div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:4px">✓ Acceptkriterier</div><div style="color:#78350f;line-height:1.6;white-space:pre-wrap">${esc(l.acceptance_criteria)}</div></div>`:''}
+        <div id="mat-${l.id}"></div>
       </td>
     </tr>`).join('')}</tbody>
   </table></div>
@@ -2036,7 +2076,7 @@ function saveCtr(){const id=document.getElementById('mc-id').value;const name=do
 
 function openNewDoc(cid){document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value='';['dd-name','dd-url','dd-sdate'].forEach(id=>document.getElementById(id).value='');document.getElementById('dd-tmpl').value='';document.getElementById('dd-status').value='template';openOv('doc');}
 function openEditDoc(cid,did){const c=state.contracts.find(c=>c.id===cid);if(!c)return;const d=(c.documents||[]).find(d=>d.id===did);if(!d)return;document.getElementById('dd-cid').value=cid;document.getElementById('dd-did').value=did;document.getElementById('dd-tmpl').value=d.templateKey||'';document.getElementById('dd-name').value=d.name||'';document.getElementById('dd-status').value=d.status||'template';document.getElementById('dd-url').value=d.signedUrl||'';document.getElementById('dd-sdate').value=d.signedDate||'';openOv('doc');}
-function onDocTmpl(){const k=document.getElementById('dd-tmpl').value;if(k&&TMPL[k])document.getElementById('dd-name').value=TMPL[k].name;}
+function onDocTmpl(){const k=document.getElementById('dd-tmpl').value;if(k&&TMPL[k]){document.getElementById('dd-name').value=TMPL[k].name;const t=state.contractTemplates.find(t=>t.fileName===TMPL[k].file);if(t&&t.fileUrl)document.getElementById('dd-url').value=t.fileUrl;}}
 function delDoc(cid,did){const c=state.contracts.find(c=>c.id===cid);if(!c)return;c.documents=(c.documents||[]).filter(d=>d.id!==did);sv();showContractDetail(cid,_ctrBack);}
 function saveDoc(){const cid=document.getElementById('dd-cid').value;const did=document.getElementById('dd-did').value;const name=document.getElementById('dd-name').value.trim();if(!name){alert('Dokumentnavn påkrævet');return;}const c=state.contracts.find(c=>c.id===cid);if(!c)return;if(!c.documents)c.documents=[];const data={id:did||genId(),templateKey:document.getElementById('dd-tmpl').value||null,name,status:document.getElementById('dd-status').value,signedUrl:document.getElementById('dd-url').value.trim(),signedDate:document.getElementById('dd-sdate').value};if(did){const i=c.documents.findIndex(d=>d.id===did);if(i>=0)c.documents[i]=data;}else c.documents.push(data);sv();closeOv('doc');showContractDetail(cid,_ctrBack);}
 
