@@ -400,9 +400,10 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfc}
   <div class="mbody">
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Del dette link. Leverandøren ser kontraktdetaljer og kan downloade dokumenter uden login.</div>
     <div class="fg"><label class="fl">Leverandørlink</label><div class="copy-box" id="suplink-url"></div></div>
-    <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm" onclick="copySupLink()">📋 Kopier</button>
       <button class="btn btn-ghost btn-sm" onclick="previewSupLink()">👁 Forhåndsvis</button>
+      <button class="btn btn-primary btn-sm" onclick="openMailto()">✉️ Åbn i Outlook</button>
     </div>
   </div>
   <div class="mfooter"><button class="btn btn-ghost" onclick="closeOv('suplink')">Luk</button><button class="btn btn-green" onclick="markCtrSent()">✓ Markér som sendt</button></div>
@@ -1328,6 +1329,40 @@ function markCtrSent(){
   const c=state.contracts.find(c=>c.id===_curLinkCid);
   if(c){c.linkSentAt=new Date().toISOString().split('T')[0];if(c.stage==='draft'||c.stage==='accepted')c.stage='sent';sv();}
   closeOv('suplink');showContractDetail(_curLinkCid,_ctrBack);
+}
+function openMailto(){
+  const url=document.getElementById('suplink-url').textContent;
+  if(!url||url.startsWith('Generer')||url.startsWith('Fejl'))return alert('Vent til linket er klar');
+  const c=state.contracts.find(c=>c.id===_curLinkCid);
+  if(!c)return;
+  const sup=state.suppliers.find(s=>s.id===c.supplierId);
+  const proj=state.projects.find(p=>p.id===c.projectId);
+  const toEmail=sup?.email||'';
+  const supName=sup?.name||'Leverandør';
+  const ctrName=c.name||'kontrakt';
+  const projName=proj?.name||'';
+  const deadline=c.deadline?new Date(c.deadline).toLocaleDateString('da-DK',{day:'numeric',month:'long',year:'numeric'}):'';
+  const lines=state.contractLines.filter(l=>l.contractId===c.contractId||l.contractId===_curLinkCid);
+  const taskList=lines.length?lines.map(l=>`  - ${l.name}${l.qty?' ('+l.qty+(l.unit?' '+l.unit:'')+')':`}`).join('\n'):'';
+  const subject=encodeURIComponent(`Tilbudsforespørgsel – ${ctrName}${projName?' ('+projName+')':''}`);
+  const body=encodeURIComponent(
+`Kære ${supName},
+
+Vi sender hermed en tilbudsforespørgsel vedrørende følgende opgave:
+
+Kontrakt: ${ctrName}${projName?'\nProjekt: '+projName:''}${deadline?'\nTilbudsfrist: '+deadline:''}
+
+${taskList?'Opgaver/leverancer:\n'+taskList+'\n\n':''}Via nedenstående link kan du se alle detaljer, tekniske specifikationer og relevante dokumenter – samt afgive dit tilbud direkte:
+
+${url}
+
+Linket kræver ikke login. Har du spørgsmål undervejs, er du velkommen til at bruge beskedfunktionen i portalen eller kontakte os direkte.
+
+Med venlig hilsen
+NemInventar ApS
+kontakt@neminventar.dk`
+  );
+  window.open(`mailto:${toEmail}?subject=${subject}&body=${body}`,'_blank');
 }
 
 // ── SUPPLIER PUBLIC VIEW ──
