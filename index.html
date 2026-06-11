@@ -1343,7 +1343,7 @@ function openMailto(){
   const projName=proj?.name||'';
   const deadline=c.deadline?new Date(c.deadline).toLocaleDateString('da-DK',{day:'numeric',month:'long',year:'numeric'}):'';
   const lines=state.contractLines.filter(l=>l.contractId===c.contractId||l.contractId===_curLinkCid);
-  const taskList=lines.length?lines.map(l=>'  - '+l.name+(l.qty?' ('+l.qty+(l.unit?' '+l.unit:'')+')'):'').join('\n'):'';
+  const taskList=lines.length?lines.map(l=>'  - '+l.name+(l.qty?' ('+l.qty+(l.unit?' '+l.unit:'')+')':'')).join('\n'):'';
   const subject=encodeURIComponent(`Tilbudsforespørgsel – ${ctrName}${projName?' ('+projName+')':''}`);
   const body=encodeURIComponent(
 `Kære ${supName},
